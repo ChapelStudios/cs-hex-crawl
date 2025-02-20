@@ -1,0 +1,41 @@
+{
+  "isMoveHoverActive": false,
+  "knownTiles": [
+    {
+      "tileId": "guid",
+      "events": {}
+    }
+  ],
+  "gameClock": {
+    "dayCount": 0,
+    "token_id": {
+      "currentHours": 0,
+      "lastRandomCheck?": 0
+    }
+  },
+  "isInitComplete": false,
+  "factions": [
+    {
+      "population": {
+        "total": 0,
+        "infirm": 0,
+        "warriors": 0,
+        "foragers": 0
+      }
+    }
+  ],
+  "terrainEvents": {
+    "tile_id": {
+      "data": "active event object",
+      "endTime?": 1
+    },
+    "token_id": {
+      "data": "active event object",
+      "endTime": 1
+    }
+  },
+  "knownTileLocations": {
+    "locationId": "tile_id"
+  },
+  "occurredEvents": []
+}

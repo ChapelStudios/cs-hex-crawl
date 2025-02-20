@@ -1,0 +1,22 @@
+<div>
+  <form>
+    <header class="sheet-header flexrow">
+      <div class="profile" >
+      <img src="{{actor.prototypeToken.texture.src}}" title="{{actor.name}}" data-edit="prototypeToken.texture.src"/>
+      <img src="{{actor.system.tokenImg}}" class="token-image"  data-edit="system.tokenImg">
+      </div>
+
+      <div class="header-details flexcol">
+        <div class="header-top flexrow">
+          <h1 class="charname">
+            <input name="name" type="text" value="{{actor.name}}" placeholder="{{ localize 'D35E.CharacterName' }}"/>
+          </h1>
+        </div>
+        <h2>Hex Configuration</h2>
+        {{radioBoxes 'hexTokenType' hexTokenTypeChoices checked=currentPartyType}}
+      </div>
+    </header>
+    <label>Reset Prototype Token Config?</label>
+    <input type="checkbox" name="shouldResetConfig" {{checked shouldResetConfig}}>
+  </form>
+</div>

@@ -1,0 +1,63 @@
+<form>
+  <div>
+    <h2>Player Assignment</h2>
+  </div>
+  {{#each partyMembers}}
+    <div>
+      <label>{{this.name}}</label><br>
+      {{radioBoxes this.id ../tokenOptions checked=this.group}}
+    </div>
+  {{/each}}
+  <div>
+    <h2>Refugee Assignment</h2>
+    {{#each population}}
+      <div class="{{this.class}}">
+        <h3>{{this.name}}</h3>
+        <div class="hc-pc-gra">
+          <div>
+            Foragers<br>
+            {{numberInput this.foragers name=(concat this.id "-foragers") step=1 min=0 max=../maxPopulationData.foragers}}
+          </div>
+          <div>
+            Warriors<br>
+            {{numberInput this.warriors name=(concat this.id "-warriors") step=1 min=0 max=../maxPopulationData.warriors}}
+          </div>
+          <div>
+            Infirm<br>
+            {{numberInput this.infirm name=(concat this.id "-infirm") step=1 min=0 max=../maxPopulationData.infirm}}
+          </div>
+          <div>
+            Refugees<br>
+            {{numberInput this.refugees name=(concat this.id "-refugees") step=1 min=0 max=../maxPopulationData.refugees}}
+          </div>
+        </div>
+      </div>
+    {{/each}}
+    {{#with campData}}
+      <h3>{{name}}</h3>
+      <div class="hc-pc-gra">
+        <div>
+          Foragers<br />
+          <span id="{{concat id "-foragers"}}">{{foragers}}</span>
+        </div>
+        <div>
+          Warriors<br />
+          <span id="{{concat id "-warriors"}}">{{warriors}}</span>
+        </div>
+        <div>
+          Infirm<br />
+          <span id="{{concat id "-infirm"}}">{{infirm}}</span>
+        </div>
+        <div>
+          Refugees<br />
+          <span id="{{concat id "-refugees"}}">{{refugees}}</span>
+        </div>
+      </div>
+    {{/with}}
+  </div>
+  <div class="hidden hc-pc-ircw">These numbers don't add up, check them yo.</div>
+  <footer>
+    <button type="submit" class="submit-btn">Submit</button>
+    <button type="button" class="cancel-btn">Cancel</button>
+  </footer>
+</form>

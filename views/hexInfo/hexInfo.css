@@ -1,0 +1,38 @@
+.cs-hex-info-container {
+  padding: 10px;
+}
+
+.cs-hex-info-top-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+}
+
+.cs-hex-info-move-cost, .cs-hex-info-locale {
+  font-weight: bold;
+}
+
+.cs-hex-info-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: 10px;
+  grid-auto-flow: column;
+}
+
+.cs-hex-info-tile {
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid #ccc;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.cs-hex-info-tile img {
+  width: 8rem;
+  height: 8rem;
+}
+
+.cs-hex-info-tile h2 {
+  text-align: center;
+}

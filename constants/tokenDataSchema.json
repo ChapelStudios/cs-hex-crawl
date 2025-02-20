@@ -1,0 +1,44 @@
+{
+  "isCamp": false,
+  "isParty": true,
+  "movesPerDay": 9,
+  "currentMoveCount": 3,
+  "movesDetails": {
+    "normal": {
+      "dailyMoves": 9,
+      "speed": 0.89
+    },
+    "heavy": {
+      "dailyMoves": 6,
+      "speed": 1.33
+    }
+  },
+  "provisions": {
+    "carts": 0,
+    "blankets": 0,
+    "foodUnits": 0,
+    "medicine": 0,
+    "weapons": 0,
+    "makeShiftWeapons": 0,
+    "spices": 0
+  },
+  "groupConfig": {
+    "partyMembers": [
+      "actor_Id"
+    ],
+    "infirm": 0,
+    "warriors": 0,
+    "foragers": 0,
+    "refugees": 0,
+    "total": 0,
+    "distribution": {
+      "faction_id": {
+        "infirm": 0,
+        "warriors": 0,
+        "foragers": 0,
+        "refugees": 0,
+        "total": 0
+      }
+    }
+  }
+}

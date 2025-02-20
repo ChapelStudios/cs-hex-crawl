@@ -1,0 +1,11 @@
+.flipped {
+  transform: rotate(180deg);
+}
+.hc-pc-gra {
+  display: grid;
+  grid-auto-flow: column;
+  grid-gap: 1em;
+}
+.hidden {
+  display: none;
+}

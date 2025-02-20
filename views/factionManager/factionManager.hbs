@@ -1,0 +1,45 @@
+<form>
+  {{#each factions as |faction index|}}
+  <div class="faction-entry">
+    <h3>{{faction.name}}</h3>
+    <div class="faction-details">
+      <div class="header-row">
+        <span>Warriors</span>
+        <span>Foragers</span>
+        <span>Infirm</span>
+        <span>Refugees</span>
+        <span>Total Population</span>
+      </div>
+      <div class="value-row">
+        <input type="number" name="factions[{{index}}].population.warriors" value="{{faction.population.warriors}}" {{#unless editable}}readonly{{/unless}} />
+        <input type="number" name="factions[{{index}}].population.foragers" value="{{faction.population.foragers}}" {{#unless editable}}readonly{{/unless}} />
+        <input type="number" name="factions[{{index}}].population.infirm" value="{{faction.population.infirm}}" {{#unless editable}}readonly{{/unless}} />
+        <input type="number" name="factions[{{index}}].population.refugees" value="{{faction.population.refugees}}" readonly />
+        <input type="number" name="factions[{{index}}].population.total" value="{{faction.population.total}}" {{#unless editable}}readonly{{/unless}} />
+      </div>
+    </div>
+  </div>
+  {{/each}}
+  <div class="totals-section">
+    <h3>Totals</h3>
+    <div class="totals-details">
+      <div class="header-row">
+        <span>Warriors</span>
+        <span>Foragers</span>
+        <span>Infirm</span>
+        <span>Refugees</span>
+        <span>Total Population</span>
+      </div>
+      <div class="value-row">
+        <input type="number" value="{{totals.warriors}}" readonly />
+        <input type="number" value="{{totals.foragers}}" readonly />
+        <input type="number" value="{{totals.infirm}}" readonly />
+        <input type="number" value="{{totals.refugees}}" readonly />
+        <input type="number" value="{{totals.total}}" readonly />
+      </div>
+    </div>
+  </div>
+  {{#if editable}}
+  <button type="submit">Save</button>
+  {{/if}}
+</form>

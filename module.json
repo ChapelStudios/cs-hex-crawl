@@ -1,0 +1,33 @@
+{
+    "name": "cs-hex-crawl",
+    "title": "CS HexCrawl",
+    "description": "Rules for running a hexcrawl for DL3 Dragons of Hope as a campaign in foundry on the 3.5 SRD system.",
+    "authors": [
+        {
+            "name": "RevJake"
+        }
+    ],
+    "version": "0.0.1",
+    "compatibility": {
+        "minimum": "11",
+        "verified": "11"
+    },
+    "esmodules": [
+      "hexCrawl.js"
+    ],
+    "styles": [
+      "core.css"
+    ],
+    "packs": [],
+    "relationships": {
+        "requires": [{
+            "id": "socketlib",
+            "type": "module",
+            "manifest": "https://raw.githubusercontent.com/manuelVo/foundryvtt-socketlib/master/module.json",
+            "compatibility": {
+                "verified": "1.0.13"
+            }
+        }]
+    },
+    "socket": true
+}

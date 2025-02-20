@@ -1,0 +1,14 @@
+<div class="cs-hex-inv-container">
+  {{#each distribution as |types faction|}}
+  <div class="cs-hex-inv-item">
+    <div>{{faction}}</div>
+    <div class="cs-hex-inv-types">
+      {{#each types as |value type|}}
+        {{#if value}}
+        <div>{{type}}: {{value}}</div>
+        {{/if}}
+      {{/each}}
+    </div>
+  </div>
+  {{/each}}
+</div>

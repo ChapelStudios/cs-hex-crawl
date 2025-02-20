@@ -1,0 +1,57 @@
+<form>
+  <h1>Starting Bonuses</h1>
+  <div class="bonus-container">
+    <div class="bonus-category">
+      <h2>Carts</h2>
+      <br>
+      {{numberInput carts name="bonusCarts" step=1 min=0}}
+    </div>
+    <div class="bonus-category">
+      <h2>Food Per Cart</h2>
+      <br>
+      {{numberInput foodPerCart name="bonusFoodPerCart" step=1 min=0}}
+    </div>
+    <div class="bonus-category">
+      <h2>Food</h2>
+      <br>
+      {{numberInput foodUnits name="bonusFood" step=1 min=0}}
+    </div>
+    <div class="bonus-category">
+      <h2>Weapons</h2>
+      <br>
+      {{numberInput weapons name="bonusWeapons" step=1 min=0}}
+    </div>
+    <div class="bonus-category">
+      <h2>Make Shift Weapons</h2>
+      <br>
+      {{numberInput makeShiftWeapons name="bonusMakeShiftWeapons" step=1 min=0}}
+    </div>
+    <div class="bonus-category">
+      <h2>Medicine</h2>
+      <br>
+      {{numberInput medicine name="bonusMedicine" step=1 min=0}}
+    </div>
+    <div class="bonus-category">
+      <h2>Spices</h2>
+      <br>
+      {{numberInput spices name="bonusSpices" step=1 min=0}}
+    </div>
+    <div class="bonus-category">
+      <h2>Blankets</h2>
+      <br>
+      {{numberInput blankets name="bonusBlankets" step=1 min=0}}
+    </div>
+  </div>
+  <hr />
+  <div class="bonus-category">
+    <h2>Start Time</h2>
+    <br>
+    {{numberInput startTime name="startTime" step=1 min=0 max=24}}
+  </div>
+  <hr />
+  <footer>
+    <button type="button" class="reset-btn">Reset</button>
+    <br />
+    <button type="submit" name="submit" class="submit-btn">submit</button>
+  </footer>
+</form>

@@ -1,0 +1,15 @@
+<form>
+  <div class="hero-section">
+    <h3>Heroes of The Lance</h3>
+    <div>{{partyMemberString}}</div>
+  </div>
+  {{> timeDataFields}}
+
+  {{> provisionFields}}  
+  <div class="cs-hex-inv-item">
+    <div>Carts</div>
+    <div>{{numberInput carts name="carts" step=1 min=0 max=10000}}</div>
+  </div>
+
+  {{> campGroupInfoFields}}
+</form>

@@ -1,0 +1,17 @@
+<div class="cs-hex-info-container">
+  <div class="cs-hex-info-top-row">
+    <div class="cs-hex-info-move-cost">Move Cost: <span>{{cost}}</span></div>
+    <div class="cs-hex-info-locale">Locale: <span>{{localeString}}</span></div>
+  </div>
+
+  <div class="cs-hex-info-tiles">
+    {{#if hasEvents}}
+      {{#each events}}
+        <div class="cs-hex-info-tile{{#if this.isForaging}} cs-hex-foraging{{/if}}">
+          <img src="{{this.icon}}" alt="{{this.name}}">
+          <h2>{{this.displayName}}</h2>
+        </div>
+      {{/each}}
+    {{/if}}
+  </div>
+</div>

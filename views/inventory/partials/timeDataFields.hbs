@@ -1,0 +1,16 @@
+<div class="cs-hex-time-data-container">
+  <div class="cs-hex-time-data-item">
+    <div>Current Hours</div>
+    <div>{{formatTime hours}}</div>
+  </div>
+  <div class="cs-hex-time-data-item">
+    <div>Current Day</div>
+    <div>{{days}}</div>
+  </div>
+  {{#if isGM}}
+  <div class="cs-hex-time-data-item">
+    <div>Last Random Check</div>
+    <div>{{lastRandomCheck}}</div>
+  </div>
+  {{/if}}
+</div>
