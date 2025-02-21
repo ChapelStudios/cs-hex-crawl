@@ -36,6 +36,21 @@ export const getHexCrawlDataFromTile = (tile) => ({
   ...(tile?.flags.hexCrawl ?? {}),
 });
 
+export const resetEventsForAllTiles = async (scene) => {
+  const jobs = [];
+
+  for (const tile of scene.tiles) {
+    if (isHexCrawlTile(tile)) {
+      jobs.push(updateTileHexCrawlData(tile, {
+        events: defaultTile.events,
+        hasCheckedEvents: false,
+      }));
+    }
+  }
+
+  await Promise.all(jobs);
+}
+
 export const getTileZoneId = (tile) => getHexCrawlDataFromTile(tile).zoneId;
 export const getTileLocale = (tile) => getHexCrawlDataFromTile(tile).locale;
 export const getTileEvents = (tile) => getHexCrawlDataFromTile(tile).events;

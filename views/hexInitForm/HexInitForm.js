@@ -1,7 +1,11 @@
+import { moduleBasePath } from "../../constants/paths.js";
 import { initFactions, resetFactionData } from "../../factions/factions.js";
 import { initGameClock, resetGameClock } from "../../repos/gameClock.js";
 import { completeHexCrawlInit, getCampToken, getHexCrawlTokens, hasCompletedHexCrawlInit, initGroupConfig } from "../../repos/gameSettings.js";
 import { defaultProvisions, getStartingProvisions, resetAllProvisions, updateProvisions } from "../../repos/provisions.js";
+import { resetEventsForAllTiles } from "../../repos/tiles.js";
+
+const localPath = (file) => `${moduleBasePath}views/hexInitForm/${file}`;
 
 export class HexInitForm extends FormApplication {
   /** 
@@ -11,7 +15,7 @@ export class HexInitForm extends FormApplication {
     return mergeObject(super.defaultOptions, {
       id:"cs-hex-init-form",
       title: "Initialize DL3 Hex Crawl",
-      template: "modules/dragonlance35/modules/hexcrawl/views/hexInitForm/hexInitForm.hbs",
+      template: localPath("hexInitForm.hbs"),
       classes: [],
       width: 'auto',
       height: 'auto',
@@ -35,7 +39,8 @@ export class HexInitForm extends FormApplication {
     resetAllProvisions(tokens);
     resetFactionData(this.object);
     initGroupConfig(this.object, {});
-    resetGameClock(tokens)
+    resetGameClock(tokens);
+    resetEventsForAllTiles(this.object);
     this.render();
   }
 
@@ -92,6 +97,7 @@ export class HexInitForm extends FormApplication {
       updateProvisions(mainCampToken, getStartingProvisions(formData)),
       initGroupConfig(this.object, {}), // empty obj will reset all tokens
       completeHexCrawlInit(this.object),
+      resetEventsForAllTiles(this.object),
     ]);
   }
 };

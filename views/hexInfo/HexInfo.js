@@ -2,7 +2,7 @@ import { localeInfoLookup } from "../../constants/moveCosts.js";
 import { moduleBasePath } from "../../constants/paths.js";
 import { getMoveCostFromLocale } from "../../repos/moves.js";
 import { getHexCrawlDataFromTile, nullTileId } from "../../repos/tiles.js";
-//import { launchForagingYieldDetails } from "../foraging/ForagingYieldDetails.js";
+import { launchForagingYieldDetails } from "../foraging/ForagingYieldDetails.js";
 
 const localPath = (file) => `${moduleBasePath}views/hexInfo/${file}`;
 
@@ -37,21 +37,23 @@ export class HexInfo extends FormApplication {
   async getData(options) {
     const tileData = await getHexCrawlDataFromTile(this.object);
     const cost = getMoveCostFromLocale(tileData.locale);
-    const hasEvents = tileData.events?.some(x => x) ?? false;
     const localeString = tileData.locale
       ?.map(l => localeInfoLookup[l].display)
       ?.join(', ');
 
-    const events = Object.keys(tileData.events).reduce((results, next) => {
+    const events = Object.keys(tileData.events).reduce((results, nextKey) => {
+      const next = tileData.events[nextKey];
       if (next.name !== nullTileId) {
         results.push(next);
       }
       return results;
     }, []);
+    
+    const hasEvents = events.some(x => x) ?? false;
 
     return {
       ...tileData,
-      events: tileData.events.filter(x => x.name !== nullTileId),
+      events,
       cost,
       hasEvents,
       localeString,
@@ -114,6 +116,6 @@ export const renderHexDetailInfo = async (tile, token) => {
   const options = {
     template: localPath("hexActionInfo.hbs"),
   };
-  // const infoWindow = new HexInfo(tile, token, options);
-  // infoWindow.render(true);
+  const infoWindow = new HexInfo(tile, token, options);
+  infoWindow.render(true);
 };

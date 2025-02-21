@@ -3,7 +3,7 @@ import { distanceBetweenPoints, snapMovementTo1 } from "../helpers/math.js";
 import { renderHexDetailInfo } from "../views/hexInfo/HexInfo.js";
 import { discoverTile } from "./events.js";
 import { getGameClock } from "./gameClock.js";
-import { getTileByLocation, getTileLocale } from "./tiles.js";
+import { getTileByLocation, getTileLocale, isHexCrawlTile } from "./tiles.js";
 
 export const getTokenMoves = (token) => token.flags.hexCrawl?.currentMoveCount ?? 0;
 export const getTokenDailyMoves = (token) => token.flags.hexCrawl?.movesPerDay ?? 0;
@@ -69,16 +69,27 @@ export const onTokenMove = async (scene, token, updates, options, userId) => {
     const movementDistance = distanceBetweenPoints(token.x, token.y, tokenGridPos.x, tokenGridPos.y);
     const snappedPosition = snapMovementTo1(token.x, token.y, tokenGridPos.x, tokenGridPos.y, gridSize);
 
+    // if token didn't more to a hexCrawlTile do nothing
+    const postMoveTile = await getTileByLocation(scene, snappedPosition);
+    if (!isHexCrawlTile(postMoveTile)) {
+      return;
+    }
+
     // If the token moves more than one hex, snap to one hex distance
     if (movementDistance > gridSize) {
+      // Allow the GM to move the token around without effecting game play
+      // ToDo: allow the gm to move 1 as well and instead ask gm if tile should be discovered.
+      if (movementDistance > (gridSize * 2) && game.user.isGM) {
+        return;
+      }
       updates.x = snappedPosition.x;
       updates.y = snappedPosition.y;
     }
 
-    //const premoveTile = await getTileByLocation(scene, token);
-    const postMoveTile = await getTileByLocation(scene, snappedPosition);
-
     // handle move cost
+    // ToDo: when using the road bonus you should actually pay this:
+    // ((premoveTile.cost + postMoveTile.cost) / 2) - premoveTile.cost
+    // ToDo: extract this so it can also be used in the mouseover Preview Tool (HexBasicInfo)
     const hasRoadBonus = doesTokenHaveRoadBonus(token);
     const isNewTileRoad = doesTileGiveRoadBonus(postMoveTile);
     const cost = hasRoadBonus && isNewTileRoad

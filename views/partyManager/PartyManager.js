@@ -1,4 +1,5 @@
 import { refugeeTypes } from "../../constants/moveCosts.js";
+import { moduleBasePath } from "../../constants/paths.js";
 import { requestRefugees, returnRefugees } from "../../factions/factions.js";
 import { 
   getPartyMemberList, 
@@ -62,6 +63,8 @@ const updateGroupTokenOwners = async (groups, partyTokens, campToken) => {
   await Promise.all(jobs);
 };
 
+const localPath = (file) => `${moduleBasePath}views/partyManager/${file}`;
+
 export class PartyManager extends FormApplication {
   /** 
   * @override
@@ -70,7 +73,7 @@ export class PartyManager extends FormApplication {
     return mergeObject(super.defaultOptions, {
       id:"cs-hex-init-form",
       title: "Hex Crawl Party Manager",
-      template: "modules/dragonlance35/modules/hexcrawl/views/partyManager/partyManager.hbs",
+      template: localPath("partyManager.hbs"),
       classes: [],
       width: 'auto',
       height: 'auto',

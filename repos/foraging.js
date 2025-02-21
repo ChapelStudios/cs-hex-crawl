@@ -4,7 +4,7 @@ import { rollWeighted } from "../helpers/math.js";
 import { executeForActorsAsync } from "../socket.js";
 import { getTokenPartyMembers } from "./gameSettings.js";
 // import { prettyPrintJson } from "./foraging.tests.js";
-import { getTileLocale } from "./tiles.js";
+import { getTileEvents, getTileLocale } from "./tiles.js";
 
 const calculateSkillBonus = (amountOverDC) => {
   let skillBonus = 0;
@@ -119,6 +119,19 @@ const calculateSkillBonusForHerbs = (amountOverDC) => {
 
   return 0;
 };
+
+const unsuccessfulForage = Object.freeze({
+  name: "Unsuccessful Forage",
+  isComplete: true,
+  isRepeatable: false,
+  costFactor: null,
+  cost: null,
+  costRounding: null,
+  description: "While this had looked like a good spot for XXX it turned out to be an uneventful expedition.",
+  locale: [],
+  duration: null,
+  weight: 0,
+});
 
 const gatherHerbs = async (amountOverDC, locales) => {
   const results = [];
@@ -266,48 +279,51 @@ export const foragingSocketConfig = socket => socket.register(
   requestSkillCheckActionName,
   async (actor, skillname) => {
     return await actor.rollSkill(skillname);
-  });
+  }
+);
 
-export const getForagingBounty = async (tile, token) => {
+export const getForagingBounty = async (tile) => {
+  const locales = getTileLocale(tile);
+  const bounty = await getRandomBountyType(locales);
+
+  return wrapBountyAsEvent(bountyInformation[bounty]);
+};
+
+export const forageBounty = async (tile, token) => {
+  const bountyType = getTileEvents(tile)?.forage?.type;
+
+  if (!bountyType) {
+    return null;
+  }
+
   const locales = getTileLocale(tile);
   const survival = "sur";
 
   const partyActors = getTokenPartyMembers(token)
     .map(actorId => game.actors.get(actorId))
-    .filter(actor => actor.system.skills.sur.rank > 0);
+    .filter(actor => (actor.system?.skills[survival]?.rank ?? 0) > 0);
   const rolls = await executeForActorsAsync(requestSkillCheckActionName, partyActors, survival);
-    // const rolls = await partyActors.reduce(async (total, next) => {
-  //   total[next.id] = await next.rollSkill('sur');
-  //   return total;
-  // }, {});
 
-  //await Promise.all(Object.values(rolls));
   const survivalCheck = processRollResults(rolls);
   const amountOverDC = survivalCheck.total - 10;
 
   if (amountOverDC < 0) {
-    return null;
-  }
-
-  // Select a random bounty type
-  const bountyType = await getRandomBountyType(locales);
-  if (!bountyType) {
-    return null;
+    return { ...unsuccessfulForage };
   }
 
   const bounty = bountyType === bountyTypes.herb
     ? gatherHerbs(amountOverDC, locales)
     : forageNonHerbs(amountOverDC, locales, bountyType);
 
-  return wrapBountyAsEvent(await bounty);
-};
+  return wrapBountyAsEvent(await bounty, survivalCheck);
+}
 
-const wrapBountyAsEvent = (bounty) => {
+const wrapBountyAsEvent = (bounty, survivalCheck = null) => {
   return {
     ...bounty,
     isImmediate: true,
     isRepeatable: false,
-    survivalCheck,
+    ...(survivalCheck ? { survivalCheck } : {}),
     isForaging: true,
   }
 }

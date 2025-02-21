@@ -1,6 +1,8 @@
 import { localeTypes } from "../../constants/moveCosts.js";
 import { getTileLocale, getTileZoneId, updateTileHexCrawlData } from "../../repos/tiles.js";
 
+const localPath = (file) => `${moduleBasePath}views/hexTileConfig/${file}`;
+
 export class HexTileConfig extends FormApplication {
   #selectedTiles = [];
 
@@ -16,7 +18,7 @@ export class HexTileConfig extends FormApplication {
     return mergeObject(super.defaultOptions, {
       id:"cs-hex-tile-config-form",
       title: "Configure DL3 Hex Crawl Tile",
-      template: "modules/dragonlance35/modules/hexcrawl/views/hexTileConfig/hexTileConfig.hbs",
+      template: localPath("hexTileConfig.hbs"),
       classes: [],
       width: 'auto',
       height: 'auto',

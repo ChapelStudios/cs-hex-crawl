@@ -67,7 +67,7 @@ export const getZoneEvent = async (scene, tile, token) => {
     .find(e => isWithinRange(...e.range, roll.total))
   return {
     ...(event || { ...nullEvent }),
-    icon: actionIconPath('terrain.jpg')
+    icon: actionIconPath('encounter.jpg')
   };
 };
 
@@ -75,8 +75,8 @@ const passesLocaleEventFilter = ({ event, locales }) => locales.some(locale => e
 
 // Luck Events
 const getLuckEncounter = async (scene, tile, token) => {
-  const luckyChance = rollRandomEncounterChance();
-  if (!(await luckyChance).needsEncounter) {
+  const luckyChance = await rollRandomEncounterChance();
+  if (!(luckyChance).needsEncounter) {
     return { ...nullEvent };
   }
 
@@ -95,7 +95,7 @@ const getLuckEncounter = async (scene, tile, token) => {
   ));
 
   return {
-    ...(rollWeighted(events) || { ...nullEvent }),
+    ...((await rollWeighted(events)) || { ...nullEvent }),
     icon: actionIconPath('luck.jpg'),
   };
 }
@@ -160,7 +160,7 @@ const createTerrainEvent = async (scene, tile, token) => {
   ));
 
   return {
-    ...(rollWeighted(events) || { ...nullEvent }),
+    ...((await rollWeighted(events)) || { ...nullEvent }),
     icon: actionIconPath('terrain.jpg'),
   };
 };
