@@ -1,9 +1,9 @@
 import { localeTypes } from "../moveCosts.js";
-import { actionIconPath } from "../paths.js";
+import { artPath } from "../paths.js";
 
 export const resultexample = {
   name: "Fishing",
-  icon: actionIconPath('fishing.png'),
+  icon: artPath('fishing.png'),
   yield: {
     name: "",
     foodUnits: 0,
@@ -13,7 +13,7 @@ export const resultexample = {
 
 export const fishingBountyInfo = {
   name: "Fishing",
-  icon: actionIconPath('fishing.png'),
+  icon: artPath('fishing.png'),
   defaultWeight: 25,
   bonuses: [
     {

@@ -1,4 +1,4 @@
-import { moduleBasePath } from "../../constants/paths.js";
+import { artPath, moduleBasePath } from "../../constants/paths.js";
 import { forageBounty } from "../../repos/foraging.js";
 import { getPartyCarryLoads, isPartyToken } from "../../repos/gameSettings.js";
 import { getProvisions } from "../../repos/provisions.js";
@@ -56,10 +56,10 @@ const exampleReturnObject = {
   moveCost: 0,
 };
 
-const localPath = (file) => `${moduleBasePath}views/foragingYieldDetails/${file}`;
+const localPath = (file) => `${moduleBasePath}views/foraging/${file}`;
 
 class ForagingYieldDetails extends FormApplication {
-  constructor(token, tile, options) {
+  constructor(tile, token, options) {
     super(token, options);
     this.#tile = tile;
   }
@@ -83,11 +83,14 @@ class ForagingYieldDetails extends FormApplication {
     const isParty = isPartyToken(this.object);
     const partyLoadLimits = isParty
       ? getPartyCarryLoads(this.object)
-      : null;
+      : {
+        normalLoad: Infinity,
+        heavyLoad: Infinity,
+      };
     const hexData = getHexCrawlDataFromTile(this.#tile);
 
     return {
-      ...hexData,
+      ...(hexData?.events?.forage || {}),
       partyLoadLimits,
       partyInv: {
         name: this.object.name,
@@ -98,6 +101,7 @@ class ForagingYieldDetails extends FormApplication {
         spices: existingProvisions.spices,
         currentLoad: existingProvisions.currentLoad,
       },
+      checkMarkIcon: artPath('checkmark.jpg')
     }
   }
 
@@ -151,7 +155,7 @@ class ForagingYieldDetails extends FormApplication {
   }
 }
 
-export const launchForagingYieldDetails = (token, tile) => {
-    const detailsApp = new ForagingYieldDetails(token, tile);
+export const launchForagingYieldDetails = (tile, token) => {
+    const detailsApp = new ForagingYieldDetails(tile, token);
     detailsApp.render(true);
 }

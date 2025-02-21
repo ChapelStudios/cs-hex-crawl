@@ -10,6 +10,13 @@
         <div class="cs-hex-info-tile{{#if this.isForaging}} cs-hex-foraging{{/if}}">
           <img src="{{this.icon}}" alt="{{this.name}}">
           <h2>{{this.displayName}}</h2>
+          <div class="cs-event-info">
+            <p>Name: {{this.displayName}}</p>
+            <p>Completed: {{this.isComplete}}</p>
+            <p>Cost: {{this.cost}}</p>
+            <p>Description: {{this.description}}</p>
+            <p>Duration: {{this.duration}}</p>
+          </div>
         </div>
       {{/each}}
     {{/if}}

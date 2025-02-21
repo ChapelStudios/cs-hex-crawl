@@ -6,13 +6,13 @@
   </div>
   <div class="icon-container">
     {{#if isComplete}}
-      <div class="icon-overlay"><img src="{{localPath 'checkmark.png'}}" alt="Completed"></div>
+      <div class="icon-overlay"><img src="{{checkMarkIcon}}" alt="Completed"></div>
     {{/if}}
     <img src="{{icon}}" class="main-icon" alt="Icon">
   </div>
   <p class="description">{{description}}</p>
   <div class="survival-check">
-    <img src="{{localPath 'dice.png'}}" class="dice-icon" alt="Dice">
+    <img src="{{icon}}" class="dice-icon" alt="Dice">
     <span>Survival Check: {{survivalCheck.total}}</span>
     <div class="roll-details">
       <p>Lead Forager: {{survivalCheck.leadForager}}</p>

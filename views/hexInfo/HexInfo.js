@@ -1,7 +1,8 @@
 import { localeInfoLookup } from "../../constants/moveCosts.js";
 import { moduleBasePath } from "../../constants/paths.js";
+import { nullTileId } from "../../repos/events.js";
 import { getMoveCostFromLocale } from "../../repos/moves.js";
-import { getHexCrawlDataFromTile, nullTileId } from "../../repos/tiles.js";
+import { getHexCrawlDataFromTile } from "../../repos/tiles.js";
 import { launchForagingYieldDetails } from "../foraging/ForagingYieldDetails.js";
 
 const localPath = (file) => `${moduleBasePath}views/hexInfo/${file}`;
@@ -48,7 +49,7 @@ export class HexInfo extends FormApplication {
       }
       return results;
     }, []);
-    
+
     const hasEvents = events.some(x => x) ?? false;
 
     return {
@@ -72,7 +73,7 @@ export class HexInfo extends FormApplication {
 
     if (this.#activeToken) {
       html.find('.cs-hex-foraging').on('click', this._handlePartyPickup.bind(this));
-    }    
+    }
   }
 
   /** 
@@ -94,7 +95,7 @@ export class HexInfo extends FormApplication {
   }
 
   async _handlePartyPickup() {
-    //launchForagingYieldDetails(this.object, this.object.#activeToken);
+    launchForagingYieldDetails(this.object, this.#activeToken);
   }
 }
 
@@ -115,6 +116,7 @@ export const renderHexMoveInfo = (tile, { x, y }) => {
 export const renderHexDetailInfo = async (tile, token) => {
   const options = {
     template: localPath("hexActionInfo.hbs"),
+    height: '290px'
   };
   const infoWindow = new HexInfo(tile, token, options);
   infoWindow.render(true);

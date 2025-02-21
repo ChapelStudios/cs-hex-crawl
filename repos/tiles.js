@@ -1,9 +1,11 @@
+import { nullEvent, nullTileId } from "./events.js";
+
 const defaultTile = Object.freeze({
   events: {
-    terrain: null,
-    encounter: null,
-    luck: null,
-    forage: null,
+    terrain: { ...nullEvent },
+    encounter: { ...nullEvent },
+    luck: { ...nullEvent },
+    forage: { ...nullEvent },
   },
   locale: [],
   zoneId: 0,
@@ -11,8 +13,6 @@ const defaultTile = Object.freeze({
   x: 0,
   y: 0,
 });
-
-export const nullTileId = "None";
 
 // const getKnownTiles = (scene) => scene.tiles._source.filter(t => !!t.flags.hexCrawl) || [];
 export const updateTileHexCrawlData = async (tile, updateData, isConfig = false) =>  await tile.update({

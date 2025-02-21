@@ -2,7 +2,7 @@ import { luckEvents } from "../constants/events/luckEvents.js";
 import { mountainEncounters } from "../constants/events/randomEncounters.js";
 import { terrainEvents } from "../constants/events/terrainEvents.js";
 import { ZoneEvents } from "../constants/events/zoneEvents.js";
-import { actionIconPath } from "../constants/paths.js";
+import { artPath } from "../constants/paths.js";
 import { isWithinRange, rollWeighted } from "../helpers/math.js";
 import { getForagingBounty } from "./foraging.js";
 import { getCurrentHours, getGameClock } from "./gameClock.js";
@@ -11,8 +11,9 @@ import { getTileLocale, getTileZoneId, updateTileHexCrawlData } from "./tiles.js
 // const encounterChance = 417;
 const encounterChance = 10000;
 
-const nullEvent = Object.freeze({
-  name: "None",
+export const nullTileId = "None";
+export const nullEvent = Object.freeze({
+  name: nullTileId,
   isComplete: true,
   isRepeatable: false,
   costFactor: null,
@@ -35,10 +36,10 @@ export const discoverTile = async (scene, tile, token) => {
   const forageEvent = await getForagingBounty(tile, token);
   
   const events = {
-    terrain: terrainEvent,
-    encounter,
-    luck: LuckEvent,
-    forage: forageEvent,
+    terrain: cleanEvent(terrainEvent),
+    encounter: cleanEvent(encounter),
+    luck: cleanEvent(LuckEvent),
+    forage: cleanEvent(forageEvent),
   };
 
   //update events for tile
@@ -47,6 +48,11 @@ export const discoverTile = async (scene, tile, token) => {
   });
 
 }
+
+const cleanEvent = (event) => ({
+  ...event,
+  displayName: event.displayName ?? event.name,
+});
 
 // Zone Events
 export const getZoneEvent = async (scene, tile, token) => {
@@ -67,7 +73,7 @@ export const getZoneEvent = async (scene, tile, token) => {
     .find(e => isWithinRange(...e.range, roll.total))
   return {
     ...(event || { ...nullEvent }),
-    icon: actionIconPath('encounter.jpg')
+    icon: artPath('encounter.jpg')
   };
 };
 
@@ -96,7 +102,7 @@ const getLuckEncounter = async (scene, tile, token) => {
 
   return {
     ...((await rollWeighted(events)) || { ...nullEvent }),
-    icon: actionIconPath('luck.jpg'),
+    icon: artPath('luck.jpg'),
   };
 }
 
@@ -124,7 +130,7 @@ export const getRandomEncounter = async (scene, token) => {
 
   return {
     ...(event || { ...nullEvent }),
-    icon: actionIconPath('encounter.jpg'),
+    icon: artPath('encounter.jpg'),
   };
 };
 
@@ -161,7 +167,7 @@ const createTerrainEvent = async (scene, tile, token) => {
 
   return {
     ...((await rollWeighted(events)) || { ...nullEvent }),
-    icon: actionIconPath('terrain.jpg'),
+    icon: artPath('terrain.jpg'),
   };
 };
 

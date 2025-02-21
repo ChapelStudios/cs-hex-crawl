@@ -1,9 +1,9 @@
 import { localeTypes } from "../moveCosts.js";
-import { actionIconPath } from "../paths.js";
+import { artPath } from "../paths.js";
 
 export const huntingBountyInfo = {
   name: "Hunting",
-  icon: actionIconPath('hunting.png'),
+  icon: artPath('hunting.png'),
   defaultWeight: 35,
   bonuses: [
     {

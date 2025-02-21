@@ -1,9 +1,9 @@
 import { localeTypes } from "../moveCosts.js";
-import { actionIconPath } from "../paths.js";
+import { artPath } from "../paths.js";
 
 export const herbGatheringBountyInfo = {
   name: "Herb Gathering",
-  icon: actionIconPath('herb.png'),
+  icon: artPath('herb.png'),
   defaultWeight: 5,
   bonuses: [
     {

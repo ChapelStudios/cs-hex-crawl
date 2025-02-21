@@ -1,5 +1,5 @@
 .cs-hex-info-container {
-  padding: 10px;
+  padding: 0.75rem 4rem; /* Adding padding to each side of the container */
 }
 
 .cs-hex-info-top-row {
@@ -14,7 +14,6 @@
 
 .cs-hex-info-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
   gap: 10px;
   grid-auto-flow: column;
 }
@@ -26,6 +25,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  position: relative;
+  width: 12rem;
+
+  &:last-child .cs-event-info {
+    left: unset;
+    right: 100%;
+  }
 }
 
 .cs-hex-info-tile img {
@@ -35,4 +41,24 @@
 
 .cs-hex-info-tile h2 {
   text-align: center;
+  max-width: 120%; /* Ensure it doesn't exceed 50% more than the icon width */
+  word-wrap: break-word;
+}
+
+/* Mouseover effect for event info */
+.cs-hex-info-tile:hover .cs-event-info {
+  display: block;
+}
+
+.cs-event-info {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 10px; /* Space between the icon and the hover effect */
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 10px;
+  z-index: 10;
+  white-space: nowrap;
 }
