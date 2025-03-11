@@ -13,7 +13,8 @@
   padding: 10px;
 }
 
-.move-cost, .locale {
+.move-cost,
+.locale {
   font-size: smaller;
 }
 
@@ -36,7 +37,8 @@
   background: rgba(255, 255, 255, 0.5);
 }
 
-.main-icon {
+.main-icon,
+.icon-overlay img {
   width: 12rem;
   height: 12rem;
 }
@@ -50,12 +52,7 @@
   display: flex;
   align-items: center;
   margin-top: 10px;
-}
-
-.dice-icon {
-  width: 2rem;
-  height: 2rem;
-  margin-right: 5px;
+  position: relative;
 }
 
 .roll-details {
@@ -65,6 +62,7 @@
   border: 1px solid #ccc;
   padding: 5px;
   z-index: 10;
+  bottom: 100%;
 }
 
 .survival-check:hover .roll-details {
@@ -75,14 +73,102 @@
   margin-top: 10px;
 }
 
-.food-units, .spices, .medicine {
+.yield-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.yield-grid[data-columns="1"] {
+  grid-template-columns: 1fr;
+}
+
+.yield-grid[data-columns="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.yield-grid[data-columns="3"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.yield-grid[data-columns="4"] {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.yield-header {
+  font-weight: bold;
+  background-color: #f2f2f2;
+  text-align: center;
+  padding: 8px;
+}
+
+.yield-cell {
+  border: 1px solid #ddd;
+  text-align: center;
+  padding: 8px;
+}
+
+/* Updated All Buttons Container */
+.take-all-container {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px;
+}
+
+.yield-grid[data-columns="1"] .take-all-container {
+  grid-column: span 1;
+}
+
+.yield-grid[data-columns="2"] .take-all-container {
+  grid-column: span 2;
+}
+
+.yield-grid[data-columns="3"] .take-all-container {
+  grid-column: span 3;
+}
+
+.yield-grid[data-columns="4"] .take-all-container {
+  grid-column: span 4;
+}
+
+/* Updated All Buttons */
+.take-all,
+.return-all {
+  width: 48%;
+  padding: 5px 10px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.take-all:hover:not([disabled]),
+.return-all:hover:not([disabled]) {
+  background-color: #45a049;
+}
+
+.take-all i,
+.return-all i {
+  margin-right: 5px;
+}
+
+/* General disabled button style */
+button[disabled] {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Party Inventory */
+.party-inv-details {
+  margin-top: 10px;
+}
+
+.party-inv-details .party-row {
   display: flex;
   justify-content: space-between;
   margin-top: 5px;
-}
-
-.party-inv-details {
-  margin-top: 10px;
 }
 
 .party-inv-details p {
@@ -92,3 +178,67 @@
 .current-load {
   font-weight: bold;
 }
+
+/* Updated Category Buttons */
+.category-buttons {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 5px;
+  gap: 10px;
+}
+
+.take,
+.return {
+  cursor: pointer;
+  color: white;
+  font-size: 2rem; /* Double the size */
+}
+
+.take[data-disabled],
+.return[data-disabled] {
+  cursor: not-allowed;
+  color: grey;
+}
+
+.take:hover:not([data-disabled]),
+.return:hover:not([data-disabled]) {
+  color: green;
+}
+
+.take:hover[data-disabled],
+.return:hover[data-disabled] {
+  color: red;
+}
+
+.dice-btn {
+  width: 2rem;
+  height: 2rem;
+  margin-right: 5px;
+  background-color: white;
+  border: none;
+  cursor: pointer;
+  margin-top: 15px;
+}
+
+.dice-btn:hover:not([disabled]) {
+  background-color: #45a049;
+}
+
+.dice-btn.disabled {
+  background-color: red;
+  cursor: not-allowed;
+  position: relative;
+}
+
+.dice-btn.disabled::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(128, 128, 128, 0.5); /* Semi-transparent grey overlay */
+  border-radius: inherit; /* Matches the dice-btn's shape, if it's rounded */
+  pointer-events: none; /* Ensures the overlay doesn't block interactions */
+}
+

@@ -1,3 +1,4 @@
+import { bountyTypes } from "../enumsObjects.js";
 import { localeTypes } from "../moveCosts.js";
 import { artPath } from "../paths.js";
 
@@ -5,6 +6,8 @@ export const gatheringBountyInfo = {
   name: "Gathering",
   icon: artPath('gathering.png'),
   defaultWeight: 20,
+  isComplete: false,
+  type: bountyTypes.gathering,
   bonuses: [
     {
       locale: [

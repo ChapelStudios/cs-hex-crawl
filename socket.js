@@ -1,7 +1,10 @@
+import { skillCheckSocketConfig } from "./helpers/entityTools.js";
+import { eventsSocketConfig } from "./repos/events.js";
 import { foragingSocketConfig } from "./repos/foraging.js";
-import { getTileByLocation } from "./repos/tiles.js";
+import { settingsSocketConfig } from "./repos/gameSettings.js";
+import { provisionsSocketConfig } from "./repos/provisions.js";
+import { tilesSocketConfig } from "./repos/tiles.js";
 
-// export let dl3HexCrawlSocket;
 export let dl3HexCrawlSocket = null;
 
 export const registerSocketModule = () => {
@@ -14,32 +17,37 @@ export const dl3HexCrawlSocketInit = () => {
   Hooks.once("socketlib.ready", () => {
     registerSocketModule();
 
-    dl3HexCrawlSocket.register('getTileByLocation', getTileByLocation);
     foragingSocketConfig(dl3HexCrawlSocket);
+    tilesSocketConfig(dl3HexCrawlSocket);
+    settingsSocketConfig(dl3HexCrawlSocket);
+    eventsSocketConfig(dl3HexCrawlSocket);
+    provisionsSocketConfig(dl3HexCrawlSocket);
+    skillCheckSocketConfig(dl3HexCrawlSocket);
   });
 }
 
-export const executeForActorsAsync = async (functionToExecute, actors, ...functionArgs) => await actors.reduce(
-  async (result, actor) => {
-    const ownerId = await findOwnerOfActor(actor);
-    result[actor.id] = !!ownerId
-      ? await dl3HexCrawlSocket.executeAsUser(functionToExecute, actor.id, actor, ...functionArgs)
-      : await dl3HexCrawlSocket.executeAsGM(functionToExecute, actor, ...functionArgs);
-    return result;
-  }, {}
-);
+export const executeForActorsAsync = async (functionToExecute, actorIds, ...functionArgs) => {
+  const results = await Promise.all(
+    actorIds.map(async actorId => {
+      const actor = game.actors.get(actorId);
+      const ownerId = await findOwnerOfActor(actor);
+      return {
+        [actor.id]: !!ownerId
+          ? await dl3HexCrawlSocket.executeAsUser(functionToExecute, ownerId, actor, ...functionArgs)
+          : await dl3HexCrawlSocket.executeAsGM(functionToExecute, actor, ...functionArgs)
+      };
+    })
+  );
+
+  // Merge all results into a single object
+  return results.reduce((acc, result) => ({ ...acc, ...result }), {});
+};
 
 // not til 12
 // const entityOwner = CONST.ENTITY_PERMISSIONS.OWNER;
 const entityOwner = 3;
 
 async function findOwnerOfActor(actor) {
-  // Get the actor by id
-  // const actor = game.actors.get(actorId);
-  // if (!actor) {
-  //   return null;
-  // }
-
   // Get the users who own the actor
   const owners = Object.entries(actor.data.permission)
     .filter(([userId, perm]) => perm >= entityOwner)

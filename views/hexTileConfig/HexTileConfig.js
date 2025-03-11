@@ -1,4 +1,5 @@
 import { localeTypes } from "../../constants/moveCosts.js";
+import { moduleBasePath } from "../../constants/paths.js";
 import { getTileLocale, getTileZoneId, updateTileHexCrawlData } from "../../repos/tiles.js";
 
 const localPath = (file) => `${moduleBasePath}views/hexTileConfig/${file}`;

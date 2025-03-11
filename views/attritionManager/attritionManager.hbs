@@ -1,0 +1,39 @@
+<form id="attrition-form" class="attrition-form">
+  {{#each circumstances}}
+  <div class="circumstance">
+    <h3>{{this.name}}</h3>
+    <div class="circumstance-row">
+      <div class="details">
+        <p>Chance: <span class="chance" data-base="{{this.baseChance}}" data-index="{{@index}}">
+          {{this.baseChance}}%
+        </span></p>
+        <p>Degree: <span class="degree" data-degree="{{this.degree}}" data-index="{{@index}}">
+          {{this.degree}}
+        </span></p>
+      </div>
+
+      {{#if this.modifiers}}
+      <div class="modifiers">
+        <h4>Modifiers</h4>
+        {{#each this.modifiers}}
+        <label class="modifier">
+          <input type="checkbox" class="modifier-checkbox" data-index="{{@index}}" data-mod-index="{{@index}}">
+          {{this.name}}
+        </label>
+        {{/each}}
+      </div>
+      {{/if}}
+
+      {{#if this.dynamicChance}}
+      <div class="dynamic-input-section">
+        <label>
+          Days: <input type="number" class="dynamic-input" data-index="{{@index}}" value="0" min="0">
+        </label>
+      </div>
+      {{/if}}
+    </div>
+  </div>
+  {{/each}}
+
+  {{> campActions factions}}
+</form>

@@ -1,3 +1,4 @@
+import { bountyTypes } from "../enumsObjects.js";
 import { localeTypes } from "../moveCosts.js";
 import { artPath } from "../paths.js";
 
@@ -15,6 +16,8 @@ export const fishingBountyInfo = {
   name: "Fishing",
   icon: artPath('fishing.png'),
   defaultWeight: 25,
+  isComplete: false,
+  type: bountyTypes.fishing,
   bonuses: [
     {
       locale: [

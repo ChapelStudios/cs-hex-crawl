@@ -1,6 +1,6 @@
 import {
+  confirmTokenDelete,
   flipMoveHoverState,
-  hasCompletedHexCrawlInit,
   isHexCrawlToken,
   isMoveHoverStateActive,
   setMoveHoverState
@@ -15,20 +15,25 @@ import { onTokenMove } from "./repos/moves.js";
 import { applyHexCrawlHudToHtml } from "./views/hexCrawlTokenHUD/HexCrawlTokenHUD.js";
 import { launchFactionManager } from "./views/factionManager/FactionManager.js";
 import { convertToHoursAndMinutes } from "./helpers/math.js";
+import { getTileByLocationActionName, resetEventsForAllTiles } from "./repos/tiles.js";
+import { launchAttritionManager } from "./views/attritionManager/AttritionManager.js";
+import { launchCampActionsGmScreen } from "./views/campActionsGmScreen/CampActionsGmScreen.js";
+import { updateToken } from "./helpers/update.js";
 
-// Register public functions
-// Hooks.once("init", async function () {
+// Register public API
+Hooks.once("init", async function () {
 
-//   // Needs 12
-//   //CONFIG.Token.hudClass = HexCrawlTokenHUD;
+  // Needs 12
+  //CONFIG.Token.hudClass = HexCrawlTokenHUD;
   
-//   game.hexCrawl = {
-//     ...(game.hexCrawl ?? {}),
-//     api: {      
-//       // put classes here
-//     }
-//   };
-// });
+  game.hexCrawl = {
+    ...(game.hexCrawl ?? {}),
+    api: {      
+      // put classes here
+      resetEventsForAllTiles: () => resetEventsForAllTiles(canvas.scene),
+    }
+  };
+});
 
 // const addActiveClass = (lookupString) => {
 //   $(lookupString).toggleClass('active');
@@ -47,7 +52,7 @@ Hooks.on("getSceneControlButtons", (controls) => {;
       title: "Show Hexcrawl Move Info",
       icon: "fa-solid fa-hexagon-image",
       toggle: true,
-      active: false,
+      active: isMoveHoverStateActive(),
       onClick: async (toggleState) => {
         await flipMoveHoverState(currentScene);
       },
@@ -91,7 +96,24 @@ Hooks.on("getSceneControlButtons", (controls) => {;
       onClick: async () => {
         launchFactionManager(currentScene);
       },
-    });
+    }, {
+      name: "cs-hex-attrition-manager",
+      title: "Hexcrawl Attrition Manager",
+      icon: "fa-duotone fa-solid fa-chart-line-down",
+      button: true,
+      onClick: async () => {
+        launchAttritionManager(currentScene);
+      },
+    }, {
+      name: "cs-hex-gm-camp-actions",
+      title: "Hexcrawl Camp Actions GM Screen",
+      icon: "fa-solid fa-campfire",
+      button: true,
+      onClick: async () => {
+        launchCampActionsGmScreen(currentScene);
+      },
+    }
+  );
 });
 
 // Party Inv
@@ -132,7 +154,7 @@ const handleMouseMove = async (event) => {
 
   const gridPos = canvas.grid.getSnappedPosition(mousePos.x, mousePos.y);
 
-  const tile = await dl3HexCrawlSocket.executeAsGM('getTileByLocation', canvas.scene, gridPos);
+  const tile = await dl3HexCrawlSocket.executeAsGM(getTileByLocationActionName, canvas.scene, gridPos);
 
   if (!!mouseApp && currentMouseAppTileId !== (tile?._id ?? null)) {
     closeMouseApp();
@@ -140,7 +162,7 @@ const handleMouseMove = async (event) => {
 
   if (!!tile) {
     currentMouseAppTileId = tile._id;
-    mouseApp = renderHexMoveInfo(tile, mousePos);
+    mouseApp = await renderHexMoveInfo(tile, mousePos);
   }
 }
 
@@ -150,10 +172,20 @@ Hooks.on('canvasReady', () => {
 
 Handlebars.registerHelper('contains', (array, value) => array && array.includes(value));
 Handlebars.registerHelper('formatTime', convertToHoursAndMinutes);
+Handlebars.registerHelper('range', function (start, end) {
+  const range = [];
+  for (let i = start; i <= end; i++) {
+    range.push(i);
+  }
+  return range;
+});
+Handlebars.registerHelper('eq', (a, b) => a === b);
+
+
 
 Hooks.on('createToken', async (tokenDoc, options, userId) => {
   if (isHexCrawlToken(tokenDoc)) {
-    await tokenDoc.update({
+    await updateToken(tokenDoc, {
       scale: 0.6,
       displayName: CONST.TOKEN_DISPLAY_MODES.ALWAYS,
       bar1: { attribute: null },
@@ -164,6 +196,19 @@ Hooks.on('createToken', async (tokenDoc, options, userId) => {
 // Hooks.on('updateToken', async (token, updates, options, userId) => {
 //   await onTokenMove(token, updates, options, userId);
 // });
+let tokenUpdateInProgress = false;
+
 Hooks.on('preUpdateToken', async (token, updates, options, userId) => {
-  await onTokenMove(canvas.scene, token, updates, options, userId);
+  if (tokenUpdateInProgress) return; // Skip if this is an internal update
+  tokenUpdateInProgress = true;
+  try {
+    await onTokenMove(canvas.scene, token, updates, options, userId);
+  } finally {
+    tokenUpdateInProgress = false;
+  }
 });
+
+Hooks.on("preDeleteToken", async (scene, tokenData, options, userId) => isHexCrawlToken(tokenData)
+  ? await confirmTokenDelete(tokenData)
+  : true
+);

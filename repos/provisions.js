@@ -1,3 +1,5 @@
+import { updateToken } from "../helpers/update.js";
+
 export const defaultProvisions = Object.freeze({
   carts: 0,
   blankets: 0,
@@ -6,28 +8,34 @@ export const defaultProvisions = Object.freeze({
   weapons: 0,
   makeShiftWeapons: 0,
   spices: 0,
-  foodweight: 0,
+  foodWeight: 0,
   currentLoad: 0,
 });
+
+export const provisionsSocketConfig = (socket) => socket.register(
+  updateProvisionsActionName,
+  updateProvisions,
+);
 
 // Top Level
 export const getProvisions = (token) => {
   return (token?.flags.hexCrawl?.provisions || { ...defaultProvisions });
 }
 export const resetAllProvisions = async (tokensToReset) => {
-  const jobs = tokensToReset.map((token) => token.update({
+  const jobs = tokensToReset.map((token) => updateToken(token, {
     [`flags.hexCrawl.provisions`]: {
       ...defaultProvisions,
     },
   }));
   await Promise.all(jobs);
 };
-export const updateProvisions = async (token, provisionsUpdate) => await token.update({
+export const updateProvisionsActionName = 'updateProvisions';
+export const updateProvisions = async (token, provisionsUpdate) => await updateToken(token, {
   ['flags.hexCrawl.provisions']: {
     ...token.flags.hexCrawl?.provisions,
     ...provisionsUpdate,
   },
-});
+}, { diff: false });
 
 // Starters
 export const getStartingCarts = (bonusCarts = 0) => 40 + bonusCarts;

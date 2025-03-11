@@ -1,3 +1,4 @@
+import { bountyTypes } from "../enumsObjects.js";
 import { localeTypes } from "../moveCosts.js";
 import { artPath } from "../paths.js";
 
@@ -5,6 +6,8 @@ export const honeyBountyInfo = {
   name: "Honey",
   icon: artPath('honey.png'),
   defaultWeight: 10,
+  isComplete: false,
+  type: bountyTypes.honey,
   bonuses: [
     {
       locale: [

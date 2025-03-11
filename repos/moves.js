@@ -1,28 +1,35 @@
 import { localeInfoLookup, localeTypes } from "../constants/moveCosts.js";
 import { distanceBetweenPoints, snapMovementTo1 } from "../helpers/math.js";
+import { updateToken } from "../helpers/update.js";
+import { dl3HexCrawlSocket } from "../socket.js";
 import { renderHexDetailInfo } from "../views/hexInfo/HexInfo.js";
-import { discoverTile } from "./events.js";
-import { getGameClock } from "./gameClock.js";
-import { getTileByLocation, getTileLocale, isHexCrawlTile } from "./tiles.js";
+import { discoverTileActionName } from "./events.js";
+import { adjustGameClock, getGameClock } from "./gameClock.js";
+import { getTileByLocationActionName, getTileLocale, isHexCrawlTile } from "./tiles.js";
 
 export const getTokenMoves = (token) => token.flags.hexCrawl?.currentMoveCount ?? 0;
 export const getTokenDailyMoves = (token) => token.flags.hexCrawl?.movesPerDay ?? 0;
-export const resetTokenMoves = async (token) => await token.update({
+export const resetTokenMoves = async (token) => await updateToken(token, {
   ['flags.hexCrawl.currentMoveCount']: getTokenDailyMoves(token),
 });
-export const setTokenMoves = async (token, moveCount, isAdjustment = false) => await token.update({
+export const setTokenMoves = async (token, moveCount) => await updateToken(token, {
   ['flags.hexCrawl.currentMoveCount']: moveCount,
 });
 
-export const adjustCurrentMoves = async (token, adjustment) => {
+export const adjustCurrentMoves = async (token, adjustment, shouldAdvanceTime = true) => {
   const currentMoves = getTokenMoves(token);
   const remainingMoves = currentMoves + adjustment;
   if (remainingMoves < 0) {
     return null;
   }
 
-  return await token.update({
-    ['flags.hexcrawl.currentMoveCount']: remainingMoves,
+  if (shouldAdvanceTime) {
+    const timeCost = getNormalTokenMoveSpeed(token) * adjustment * -1;
+    await adjustGameClock(token, timeCost);
+  }
+
+  return await updateToken(token, {
+    ['flags.hexCrawl.currentMoveCount']: remainingMoves,
   });
 };
 
@@ -35,42 +42,35 @@ export const getMoveCostFromLocale = (locale) => {
 
 // Movement Control Functions
 export const getPreMoveInfo = (token) => token?.flags.hexCrawl?.turnStartLocation || {};
-export const setPreMoveInfo = async (token, startingTile) => await token.update({
+export const setPreMoveInfo = async (token, startingTile) => await updateToken(token, {
   ['flags.hexCrawl.turnStartLocation']: startingTile,
 });
 
-// export const beforeTokenMove = async (token, updates, options, userId) => {
-//   const premoveTile = await getTileByLocation(canvas.scene, token);
-//   updates['flags.hexCrawl.turnStartLocation'] = {
-//     ...getHexCrawlDataFromTile(premoveTile),
-//     x: token.x,
-//     y: token.y,
-//   };
-// }
-
 const doesTileGiveRoadBonus = (tile) => (tile?.flags.hexCrawl?.locale ?? []).includes(localeTypes.road);
-const doesTokenHaveRoadBonus = (token) => token?.flags.hexCrawl?.hasRoadBonus ?? false;
+export const doesTokenHaveRoadBonus = (token) => (token?.flags.hexCrawl?.roadBonus ?? 0) > 0;
+const getTokenRoadBonus = (token) => token?.flags.hexCrawl?.roadBonus ?? 0;
 
 const getNormalTokenMoveSpeed = (token) => token?.flags.hexCrawl?.movesDetails?.normal.speed ?? 0;
 
 export const onTokenMove = async (scene, token, updates, options, userId) => {
   const gridSize = canvas.grid.size;
+  const ogPosition = { x: token.x, y: token.y };
   
   // if either pos has changed handle updates
   if (
-    (updates.x !== undefined && updates.x !== token.x)
-    || (updates.y !== undefined && updates.y !== token.y)
+    (updates.x !== undefined && updates.x !== ogPosition.x)
+    || (updates.y !== undefined && updates.y !== ogPosition.y)
   ) {
     const updatedPosition = {
-      x: updates.x ?? token.x,
-      y: updates.y ?? token.y,
+      x: updates.x ?? ogPosition.x,
+      y: updates.y ?? ogPosition.y,
     };
     const tokenGridPos = canvas.grid.getSnappedPosition(updatedPosition.x, updatedPosition.y);
-    const movementDistance = distanceBetweenPoints(token.x, token.y, tokenGridPos.x, tokenGridPos.y);
-    const snappedPosition = snapMovementTo1(token.x, token.y, tokenGridPos.x, tokenGridPos.y, gridSize);
+    const movementDistance = distanceBetweenPoints(ogPosition.x, ogPosition.y, tokenGridPos.x, tokenGridPos.y);
+    const snappedPosition = snapMovementTo1(ogPosition.x, ogPosition.y, tokenGridPos.x, tokenGridPos.y, gridSize);
 
-    // if token didn't more to a hexCrawlTile do nothing
-    const postMoveTile = await getTileByLocation(scene, snappedPosition);
+    // when we await this, the update will process and we need to manually perform any updates after this
+    const postMoveTile = await dl3HexCrawlSocket.executeAsGM(getTileByLocationActionName, scene, snappedPosition);
     if (!isHexCrawlTile(postMoveTile)) {
       return;
     }
@@ -90,36 +90,55 @@ export const onTokenMove = async (scene, token, updates, options, userId) => {
     // ToDo: when using the road bonus you should actually pay this:
     // ((premoveTile.cost + postMoveTile.cost) / 2) - premoveTile.cost
     // ToDo: extract this so it can also be used in the mouseover Preview Tool (HexBasicInfo)
-    const hasRoadBonus = doesTokenHaveRoadBonus(token);
-    const isNewTileRoad = doesTileGiveRoadBonus(postMoveTile);
-    const cost = hasRoadBonus && isNewTileRoad
-      ? 0
-      : getMoveCostFromLocale(getTileLocale(postMoveTile));
+    // const hasRoadBonus = doesTokenHaveRoadBonus(token);
+    // const isNewTileRoad = doesTileGiveRoadBonus(postMoveTile);
+    // const normalCost = getMoveCostFromLocale(getTileLocale(postMoveTile));
+    const { cost, newRoadBonus } = getMoveCost(postMoveTile, token);
     const remainingMoves = getTokenMoves(token) - cost;
 
     if (remainingMoves < 0) {
+      ui.notifications.warn("Not enough moves to move there!");
       // Cancel move
-      updates.x = token.x;
-      updates.y = token.y;
+      updates.x = ogPosition.x;
+      updates.y = ogPosition.y;
 
-      // await token.update(updates);
+      if (!game.user.isGM) {
+        await updateToken(token, updates);
+      }
       return; // Prevent further updates
     }
     
     updates['flags.hexCrawl.currentMoveCount'] = remainingMoves;
-    updates['flags.hexCrawl.hasRoadBonus'] = !hasRoadBonus && isNewTileRoad;
+    updates['flags.hexCrawl.roadBonus'] = newRoadBonus;
 
     // handle time cost
     const timeCost = getNormalTokenMoveSpeed(token) * cost;
     updates['flags.hexCrawl.gameClock.currentHours'] = (getGameClock(token)?.currentHours ?? 0) + timeCost;
 
-    // discover tile
-    await discoverTile(scene, postMoveTile, token);
+    // discover tile discoverTileActionName
+    await dl3HexCrawlSocket.executeAsGM(discoverTileActionName, scene, postMoveTile, token);
 
     // display hex actions info app
     await renderHexDetailInfo(postMoveTile, token);
 
-    // await token.update(updates);
-    // return false; // Prevent further updates
+    await updateToken(token, updates);
   }
+};
+
+export const getMoveCost = (tile, token) => {
+  const hasRoadBonus = doesTokenHaveRoadBonus(token);
+  const isNewTileRoad = doesTileGiveRoadBonus(tile);
+  const oldCost = getTokenRoadBonus(token);
+  const newCost = getMoveCostFromLocale(getTileLocale(tile));
+  const cost = hasRoadBonus && isNewTileRoad
+    ? Math.floor((newCost + oldCost) / 2) - oldCost
+    : newCost;
+
+  return {
+    cost,
+    newRoadBonus: !hasRoadBonus && isNewTileRoad
+      ? newCost
+      : 0,
+    normalCost: newCost,
+  };
 };

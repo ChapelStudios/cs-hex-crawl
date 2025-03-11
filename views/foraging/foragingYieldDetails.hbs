@@ -1,51 +1,25 @@
 <div class="foraging-yield-details-container">
-  <h1 class="title">{{name}}</h1>
-  <div class="details-top-row">
-    <div class="move-cost">Move Cost: {{moveCost}}</div>
-    <div class="locale">{{locale}}</div>
-  </div>
-  <div class="icon-container">
+  <form>
+    {{> title}}
+    {{> detailsRow}}
+    {{> iconContainer}}
+    <p class="description">{{description}}</p>
+    {{> survivalCheck}}
     {{#if isComplete}}
-      <div class="icon-overlay"><img src="{{checkMarkIcon}}" alt="Completed"></div>
+      <div class="yield-details">
+        <h2>Yield Results</h2>
+        {{#if allYieldTaken}}
+          <div class="yield-message">{{yieldMessage}}</div>
+        {{else}}
+          {{> yieldTable}}
+        {{/if}}
+      </div>
     {{/if}}
-    <img src="{{icon}}" class="main-icon" alt="Icon">
-  </div>
-  <p class="description">{{description}}</p>
-  <div class="survival-check">
-    <img src="{{icon}}" class="dice-icon" alt="Dice">
-    <span>Survival Check: {{survivalCheck.total}}</span>
-    <div class="roll-details">
-      <p>Lead Forager: {{survivalCheck.leadForager}}</p>
-      <p>Lead Result: {{survivalCheck.leadResult}}</p>
-      <p>Assists: {{survivalCheck.assists}}</p>
-      <p>Hindrances: {{survivalCheck.hindrances}}</p>
-      <p>Assist Bonus: {{survivalCheck.assistBonus}}</p>
-    </div>
-  </div>
-  <div class="yield-details">
-    <h2>{{yield.name}}</h2>
-    <div class="food-units">
-      <label>Food Units:</label>
-      <input class="food-units-input" type="number" name="acceptedYield.foodUnits" value="{{yield.foodUnits}}">
-    </div>
-    <div class="spices">
-      <label>Spices:</label>
-      <input class="spices-input" type="number" name="acceptedYield.spices" value="{{yield.spices}}">
-    </div>
-    <div class="medicine">
-      <label>Medicine:</label>
-      <input class="medicine-input" type="number" name="acceptedYield.medicine" value="{{yield.medicine}}">
-    </div>
-  </div>
-  <div class="party-inv-details">
-    <h2>Party Inventory</h2>
-    <p>Current Load: {{partyInv.currentLoad}}</p>
-    <p>Heavy Load: {{partyLoadLimits.heavyLoad}}</p>
-    <p>Food Units: {{partyInv.foodUnits}}</p>
-    <p>Food Weight: {{partyInv.foodweight}}</p>
-    <p>Medicine: {{partyInv.medicine}}</p>
-    <p>Spices: {{partyInv.spices}}</p>
-    <p>Estimated Food Weight: {{partyInv.estimatedFoodWeight}}</p>
-    <p>Estimated Load: {{partyInv.estimatedLoad}}</p>
-  </div>
+    {{> partyInventory}}
+    {{#if isComplete}}
+      <button type="submit" class="submit-forage"{{#if isForagingComplete}} disabled{{/if}}>Accept</button>
+    {{else}}
+      <button type="button" class="cancel-forage">Close</button>
+    {{/if}}
+  </form>
 </div>

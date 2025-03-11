@@ -8,12 +8,19 @@ export const localeTypes = {
   river: "river",
   lake: "lake",
   shore: "shore",
-  // swamp: "swamp",
-  // bog: "bog",
-  // SkullCap: "SkullCap",
-  // "Pax Tharkas": "Pax Tharkas",
+  swamp: "swamp",
+  bog: "bog",
   village: "village",
+  hotSprings: "hotSprings",
 };
+
+export const EventLocationNames = {
+  none: "none",
+  Skullcap: "Skullcap",
+  "Pax Tharkas": "Pax Tharkas",
+  "Neidar Village": "Neidar Village",
+  "Cold Cathedral": "Cold Cathedral",
+}
 
 export const hexTokenTypes = {
   camp: "camp",

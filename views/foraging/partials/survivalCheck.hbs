@@ -1,0 +1,12 @@
+<div class="survival-check">
+  <img src="{{foundryD20Icon}}" class="dice-btn{{#if disableForage}} disabled{{/if}}" alt="Dice">
+  <span>Survival Check: {{survivalCheck.total}}</span>
+  <div class="roll-details">
+    <p>Lead Forager: {{survivalCheck.leadForager}}</p>
+    <p>Lead Result: {{survivalCheck.leadResult}}</p>
+    <p>Assists: {{survivalCheck.assists}}</p>
+    <p>Ineffective: {{survivalCheck.useless}}</p>
+    <p>Foragers Bonus: {{survivalCheck.extraForagerBonus}}</p>
+    <p>Assist Bonus: {{survivalCheck.assistBonus}}</p>
+  </div>
+</div>

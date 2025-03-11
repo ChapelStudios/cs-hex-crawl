@@ -1,0 +1,93 @@
+<div class="yield-grid" data-columns="{{columnsCount}}">
+  {{#if yield.foodUnits}}
+    <div class="yield-header">Food (Units @ lb)</div>
+    <div class="yield-header">Total Weight</div>
+  {{/if}}
+  {{#if yield.spices}}
+    <div class="yield-header">Spices</div>
+  {{/if}}
+  {{#if yield.medicine}}
+    <div class="yield-header">Medicine</div>
+  {{/if}}
+  
+  {{#if yield.foodUnits}}
+    <div class="yield-cell">
+      {{#if hasFoodYield}}
+        {{> categoryButtons category="food" canAccept=canAcceptFood canUnTake=canUnTakeFood}}
+      {{/if}}
+    </div>
+    <div class="yield-cell"></div>
+  {{/if}}
+  {{#if yield.spices}}
+    <div class="yield-cell">
+      {{> categoryButtons category="spices" canAccept=canAcceptSpices canUnTake=canUnTakeSpices}}
+    </div>
+  {{/if}}
+  {{#if yield.medicine}}
+    <div class="yield-cell">
+      {{> categoryButtons category="medicine" canAccept=canAcceptMedicine canUnTake=canUnTakeMedicine}}
+    </div>
+  {{/if}}
+
+  {{#if yield.foodUnits}}
+    <div class="yield-cell">
+      {{#if hasFoodYield}}
+        {{yield.foodUnits}} @ {{yield.foodWeight}}lb
+      {{else}}
+        &nbsp;
+      {{/if}}
+    </div>
+    <div class="yield-cell">{{totalWeightYield}}lb</div>
+  {{/if}}
+  {{#if yield.spices}}
+    <div class="yield-cell">{{yield.spices}}</div>
+  {{/if}}
+  {{#if yield.medicine}}
+    <div class="yield-cell">{{yield.medicine}}</div>
+  {{/if}}
+
+  {{#if isPartyDetailShown}}
+    {{#if yield.foodUnits}}
+      <div class="yield-cell">
+        {{#if hasFoodYield}}
+          {{numberInput acceptedYield.foodUnits name="acceptedYield.foodUnits" step=1 min=0 max=yield.foodUnits class="food-input"}}
+        {{/if}}
+      </div>
+      <div class="yield-cell">{{totalWeightAccepted}}lb</div>
+    {{/if}}
+    {{#if yield.spices}}
+      <div class="yield-cell">
+        {{numberInput acceptedYield.spices name="acceptedYield.spices" step=1 min=0 max=yield.spices class="spices-input"}}
+      </div>
+    {{/if}}
+    {{#if yield.medicine}}
+      <div class="yield-cell">
+        {{numberInput acceptedYield.medicine name="acceptedYield.medicine" step=1 min=0 max=yield.medicine class="medicine-input"}}
+      </div>
+    {{/if}}
+
+    <div class="yield-cell take-all-container" colspan="4">
+      <button type="button" class="take-all" {{#unless canAcceptAll}}disabled{{/unless}}>
+        <i class="fa-solid fa-circle-caret-down"></i> Take Everything
+      </button>
+      <button type="button" class="return-all" {{#unless canUnTakeAll}}disabled{{/unless}}>
+        <i class="fa-solid fa-circle-caret-up"></i> Return Everything
+      </button>
+    </div>
+
+    {{#if yield.foodUnits}}
+      <div class="yield-cell">
+        {{#if hasFoodYield}}
+          <span class="food-total">{{partyInv.foodUnits}}</span> @ <span class="total-weight-per">{{partyInv.foodWeight}}</span>lb
+        {{/if}}
+      </div>
+      <div class="yield-cell">{{totalWeightParty}}lb</div>
+    {{/if}}
+    {{#if yield.spices}}
+      <div class="yield-cell">{{partyInv.spices}}</div>
+    {{/if}}
+    {{#if yield.medicine}}
+      <div class="yield-cell">{{partyInv.medicine}}</div>
+    {{/if}}
+  {{/if}}
+</div>

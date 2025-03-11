@@ -68,3 +68,23 @@ export const rollWeighted = async (objects) => {
   }
 };
 
+export const evaluateFormula = async (formula) => {
+  const diceRegex = /(\d+[dD]\d+)/g;
+  let match;
+  const rolls = [];
+
+  // Identify all dice rolls and process them
+  while ((match = diceRegex.exec(formula)) !== null) {
+    const roll = await new Roll(match[0]).roll();
+    rolls.push({ match: match[0], total: roll.total });
+  }
+
+  // Replace dice notation with their rolled values
+  let evaluatedFormula = formula;
+  rolls.forEach(roll => {
+    evaluatedFormula = evaluatedFormula.replace(roll.match, roll.total);
+  });
+
+  // Evaluate the final expression
+  return eval(evaluatedFormula);
+};

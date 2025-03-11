@@ -1,33 +1,43 @@
-import { nullEvent, nullTileId } from "./events.js";
+import { defaultForageEvent, nullEvent, nullTileId } from "../constants/events/constants.js";
+import { updateTile } from "../helpers/update.js";
 
 const defaultTile = Object.freeze({
   events: {
     terrain: { ...nullEvent },
     encounter: { ...nullEvent },
     luck: { ...nullEvent },
-    forage: { ...nullEvent },
+    forage: { ...defaultForageEvent },
   },
   locale: [],
   zoneId: 0,
-  hasCheckedEvents: false,
+  isDiscovered: false,
   x: 0,
   y: 0,
 });
 
 // const getKnownTiles = (scene) => scene.tiles._source.filter(t => !!t.flags.hexCrawl) || [];
-export const updateTileHexCrawlData = async (tile, updateData, isConfig = false) =>  await tile.update({
-  [`flags.hexCrawl`]: {
-    ...(tile.flags.hexCrawl ?? {}),
+export const updateTileHexCrawlData = async (tile, updateData, isConfig = false) =>  updateTile(
+  tile,
+  {
+    [`flags.hexCrawl`]: {
+      ...(tile.flags.hexCrawl ?? {}),
+      ...(isConfig ? {
+        //initComplete: true,
+      } : {}),
+      ...updateData,
+    },
     ...(isConfig ? {
-      //initComplete: true,
+      hidden: true,
+      locked: true,
     } : {}),
-    ...updateData,
   },
-  ...(isConfig ? {
-    hidden: true,
-    locked: true,
-  } : {}),
-});
+  { diff: false }
+);
+
+export const updateForageDataActionName = 'updateForageData';
+export const updateForageData = async (tile, forageEvent) => updateTile(tile, {
+  [`flags.hexCrawl.events.forage`]: forageEvent,
+}, { diff: false });
 
 export const isHexCrawlTile = (tile) => !!tile?.flags.hexCrawl;
 
@@ -36,24 +46,27 @@ export const getHexCrawlDataFromTile = (tile) => ({
   ...(tile?.flags.hexCrawl ?? {}),
 });
 
-export const resetEventsForAllTiles = async (scene) => {
+export const resetEventsForAllTiles = async () => {
+  ui.notifications.info("Beginning tile reset.");
   const jobs = [];
 
-  for (const tile of scene.tiles) {
-    if (isHexCrawlTile(tile)) {
-      jobs.push(updateTileHexCrawlData(tile, {
-        events: defaultTile.events,
-        hasCheckedEvents: false,
+  for (const { document } of canvas.tiles.tiles) {
+    if (isHexCrawlTile(document)) {
+      jobs.push(updateTileHexCrawlData(document, {
+        events: { ...defaultTile.events },
+        isDiscovered: false,
       }));
     }
   }
 
   await Promise.all(jobs);
+  ui.notifications.info("Tile reset complete.");
 }
 
 export const getTileZoneId = (tile) => getHexCrawlDataFromTile(tile).zoneId;
 export const getTileLocale = (tile) => getHexCrawlDataFromTile(tile).locale;
 export const getTileEvents = (tile) => getHexCrawlDataFromTile(tile).events;
+export const hasTileBeenDiscovered = (tile) => getHexCrawlDataFromTile(tile)?.isDiscovered;
 
 export const getTileByLocation = async (scene, location) => {
   const locationId = makeLocationId(location);
@@ -82,10 +95,19 @@ export const getTileByLocationId = (locationId) => {
 
   return canvas.scene?.tiles.get(tileId);
 };
-export const setKnownTileByLocationId = async (locationId, tileId) => {
-  await canvas.scene?.update({
-    [`flags.hexCrawl.knownTileLocations.${locationId}`]: tileId,
-  });
+
+export const getTileByLocationActionName = 'getTileByLocation';
+export const setKnownTileByLocationId = async (locationId, tileId) => await canvas.scene?.update({
+  [`flags.hexCrawl.knownTileLocations.${locationId}`]: tileId,
+});
+
+export const tilesSocketConfig = (socket) => {
+  socket.register(
+    getTileByLocationActionName,
+    getTileByLocation,
+  );
+  socket.register(
+    updateForageDataActionName,
+    updateForageData,
+  );
 };
-
-

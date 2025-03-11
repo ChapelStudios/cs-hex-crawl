@@ -4,5 +4,5 @@
   },
   "locale": ["snowfield", "road"],
   "zoneId": 0,
-  "hasCheckedEvents": false
+  "isDiscovered": false
 }

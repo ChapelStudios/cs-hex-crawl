@@ -1,19 +1,25 @@
+import { nullTileId } from "../../constants/events/constants.js";
 import { localeInfoLookup } from "../../constants/moveCosts.js";
 import { moduleBasePath } from "../../constants/paths.js";
-import { nullTileId } from "../../repos/events.js";
-import { getMoveCostFromLocale } from "../../repos/moves.js";
+import { discoverTileActionName } from "../../repos/events.js";
+import { getTokenByUser } from "../../repos/gameSettings.js";
+import { getMoveCost } from "../../repos/moves.js";
 import { getHexCrawlDataFromTile } from "../../repos/tiles.js";
+import { dl3HexCrawlSocket } from "../../socket.js";
 import { launchForagingYieldDetails } from "../foraging/ForagingYieldDetails.js";
 
 const localPath = (file) => `${moduleBasePath}views/hexInfo/${file}`;
 
 export class HexInfo extends FormApplication {
   #activeToken = null;
+  isActions = false;
+
   constructor(tile, token, options) {
     super(tile, options);
     if (!!token) {
       this.#activeToken = token;
     }
+    this.isActions = options.isActions ?? false;
   }
 
   /** 
@@ -36,10 +42,10 @@ export class HexInfo extends FormApplication {
   * @override
   */
   async getData(options) {
-    const tileData = await getHexCrawlDataFromTile(this.object);
-    const cost = getMoveCostFromLocale(tileData.locale);
+    const tileData = getHexCrawlDataFromTile(this.object);
+    const costInfo = getMoveCost(this.object, this.#activeToken);
     const localeString = tileData.locale
-      ?.map(l => localeInfoLookup[l].display)
+      ?.map(l => localeInfoLookup[l]?.display)
       ?.join(', ');
 
     const events = Object.keys(tileData.events).reduce((results, nextKey) => {
@@ -52,12 +58,17 @@ export class HexInfo extends FormApplication {
 
     const hasEvents = events.some(x => x) ?? false;
 
+    const eventCost = events.reduce((total, e)=> e.isComplete ? e.cost + total : total, 0);
+
     return {
       ...tileData,
+      ...costInfo,
       events,
-      cost,
       hasEvents,
       localeString,
+      spent: costInfo.cost + eventCost,
+      isGm: game.user.isGM,
+      tokenName: this.#activeToken?.name ?? "",
     };
   }
   
@@ -95,28 +106,42 @@ export class HexInfo extends FormApplication {
   }
 
   async _handlePartyPickup() {
-    launchForagingYieldDetails(this.object, this.#activeToken);
+    launchForagingYieldDetails(this.object, this.#activeToken, () => this.render());
   }
-}
+};
 
-export const renderHexMoveInfo = (tile, { x, y }) => {
+export const renderHexMoveInfo = async (tile, { x, y }) => {
+  const token = getTokenByUser(canvas.scene);
   const options = {
     template: localPath("hexMoveInfo.hbs"),
     isAttachedToMouse: true,
     x,
     y,
   };
-  const infoWindow = new HexInfo(tile, options);
-  infoWindow.render(true, {
-  });
+
+  // Close existing HexInfo instances
+  const closingPromises = Object.values(ui.windows)
+    .filter(app => app instanceof HexInfo && !app.isActions)
+    .map(app => app.close());
+
+  // Wait for all HexInfo instances to close
+  await Promise.all(closingPromises);
+
+  // Create and render new HexInfo instance
+  const infoWindow = new HexInfo(tile, token, options);
+  await infoWindow.render(true);
 
   return infoWindow;
 };
 
 export const renderHexDetailInfo = async (tile, token) => {
+  await dl3HexCrawlSocket.executeAsGM(discoverTileActionName, canvas.scene, tile, token);
+  tile = canvas.scene.tiles.get(tile._id);
+
   const options = {
     template: localPath("hexActionInfo.hbs"),
-    height: '290px'
+    height: '290px',
+    isActions: true,
   };
   const infoWindow = new HexInfo(tile, token, options);
   infoWindow.render(true);

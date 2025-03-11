@@ -62,3 +62,7 @@
   z-index: 10;
   white-space: nowrap;
 }
+
+.cs-hex-foraging img {
+  background-color: aliceblue;
+}

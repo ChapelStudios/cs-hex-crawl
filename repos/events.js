@@ -1,32 +1,30 @@
+import { nullEvent } from "../constants/events/constants.js";
 import { luckEvents } from "../constants/events/luckEvents.js";
 import { mountainEncounters } from "../constants/events/randomEncounters.js";
 import { terrainEvents } from "../constants/events/terrainEvents.js";
 import { ZoneEvents } from "../constants/events/zoneEvents.js";
 import { artPath } from "../constants/paths.js";
 import { isWithinRange, rollWeighted } from "../helpers/math.js";
+import { updateScene } from "../helpers/update.js";
 import { getForagingBounty } from "./foraging.js";
 import { getCurrentHours, getGameClock } from "./gameClock.js";
-import { getTileLocale, getTileZoneId, updateTileHexCrawlData } from "./tiles.js";
+import { getHexCrawlDataFromTile, getTileLocale, getTileZoneId, updateTileHexCrawlData } from "./tiles.js";
 
 // const encounterChance = 417;
 const encounterChance = 10000;
-
-export const nullTileId = "None";
-export const nullEvent = Object.freeze({
-  name: nullTileId,
-  isComplete: true,
-  isRepeatable: false,
-  costFactor: null,
-  cost: null,
-  costRounding: null,
-  description: "There is no Terrain Event here",
-  locale: [],
-  duration: null,
-  weight: 0,
-});
+export const eventsSocketConfig = (socket) => socket.register(
+  discoverTileActionName,
+  discoverTile,
+);
 
 // Discovery
+export const discoverTileActionName = 'discoverTile';
 export const discoverTile = async (scene, tile, token) => {
+  const { isDiscovered } = getHexCrawlDataFromTile(tile);
+  if (isDiscovered) {
+    return;
+  }
+
   const LuckEvent = await getLuckEncounter(scene, tile, token);    
   let encounter = await getZoneEvent(scene, tile, token);    
   const terrainEvent = await getTerrainEvent(scene, tile, token);
@@ -45,6 +43,7 @@ export const discoverTile = async (scene, tile, token) => {
   //update events for tile
   await updateTileHexCrawlData(tile, {
     events,
+    isDiscovered: true,
   });
 
 }
@@ -65,7 +64,7 @@ export const getZoneEvent = async (scene, tile, token) => {
   };
 
   const roll = await new Roll("1d100", {}).roll();
-  const event = ZoneEvents[zoneId].eventList
+  const event = (ZoneEvents[zoneId]?.eventList ?? [])
     .filter(event => passesFilters(
       { event, ...filterData },
       passesNonRepeatableEventFilter,
@@ -136,7 +135,7 @@ export const getRandomEncounter = async (scene, token) => {
 
 // Terrain Events
 const getTileTerrainEvent = (scene, tile) => scene.flags.hexCrawl?.terrainEvents?.[tile._id] ?? null;
-const setTileTerrainEvent = async (scene, tile, event) => await scene.update({
+const setTileTerrainEvent = async (scene, tile, event) => await updateScene(scene, {
   [`flags.hexCrawl.terrainEvents.${tile._id}`]: event,
 });
 

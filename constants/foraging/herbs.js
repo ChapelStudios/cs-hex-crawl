@@ -1,3 +1,4 @@
+import { bountyTypes } from "../enumsObjects.js";
 import { localeTypes } from "../moveCosts.js";
 import { artPath } from "../paths.js";
 
@@ -5,6 +6,8 @@ export const herbGatheringBountyInfo = {
   name: "Herb Gathering",
   icon: artPath('herb.png'),
   defaultWeight: 5,
+  isComplete: false,
+  type: bountyTypes.herb,
   bonuses: [
     {
       locale: [

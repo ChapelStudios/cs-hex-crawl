@@ -1,0 +1,11 @@
+<form class="camp-actions-gm-screen">
+  <div class="header">
+    <p class="current-day">Current Day: {{currentDay}}</p>
+  </div>
+
+  {{!-- Dynamically include a partial based on the activity's id --}}
+  {{#each activities}}
+    {{> (lookup . "id") this }}
+  {{/each}}
+
+</form>

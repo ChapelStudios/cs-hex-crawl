@@ -1,0 +1,97 @@
+/* General Form Styling */
+.attrition-form {
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  max-width: 1000px; /* Adjust as needed */
+}
+
+/* Circumstance Section */
+.circumstance {
+  margin-bottom: 15px;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Horizontal Layout for Rows */
+.circumstance-row {
+  display: flex;
+  flex-wrap: wrap; /* Allow elements to wrap if screen is small */
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+}
+
+/* Details Section */
+.details {
+  flex: 1 1 250px; /* Grow or shrink, min width 250px */
+  font-size: 0.9em;
+  color: #555;
+}
+
+.details p {
+  margin: 5px 0;
+}
+
+.details .chance,
+.details .degree {
+  font-weight: bold;
+  color: #000;
+}
+
+/* Modifiers Section */
+.modifiers {
+  flex: 1 1 300px; /* Adjust width */
+  font-size: 0.9em;
+}
+
+.modifiers h4 {
+  margin-bottom: 5px;
+  font-size: 1em;
+  color: #666;
+}
+
+.modifier {
+  display: block;
+  margin: 5px 0;
+  color: #444;
+}
+
+.modifier input {
+  margin-right: 5px;
+}
+
+/* Dynamic Input Section */
+.dynamic-input-section {
+  flex: 0 0 200px; /* Fixed width */
+}
+
+.dynamic-input-section label {
+  color: #444;
+}
+
+/* Input Fields */
+input[type="number"] {
+  width: 60px;
+  padding: 5px;
+  font-size: 0.9em;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* Media Queries for Responsive Design */
+@media (max-width: 600px) {
+  .circumstance-row {
+    flex-direction: column; /* Stack vertically on smaller screens */
+  }
+
+  .dynamic-input-section {
+    flex: 1 1 100%;
+  }
+}

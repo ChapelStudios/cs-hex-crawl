@@ -9,3 +9,7 @@
 .hidden {
   display: none;
 }
+
+.cs-hex-token-config-container {
+  background-color: aliceblue;
+}

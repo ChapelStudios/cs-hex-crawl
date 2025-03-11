@@ -1,9 +1,10 @@
 import { refugeeTypes } from "../constants/moveCosts.js";
+import { updateScene } from "../helpers/update.js";
 import { defaultFactions } from "./factionInfo.js"
 
 export const initFactions = async (scene) => {
   const factionData = getStartingFactionData();
-  await scene?.update({
+  await updateScene(scene, {
     ['flags.hexCrawl.factions']: factionData,
   });
   return getFactionPopulationTotals(scene);
@@ -31,7 +32,7 @@ export const getStartingFactionData = () => {
 export const getFactionData = (scene) => scene?.flags.hexCrawl?.factions || [];
 export const resetFactionData = async (scene) => await setFactionData(scene, []);
 export const setFactionData = async (scene, factions) => {
-  await scene?.update({ ['flags.hexCrawl.factions']: factions });
+  await updateScene(scene, { ['flags.hexCrawl.factions']: factions });
 };
 
 export const getFactionPopulationTotals = (scene) => {

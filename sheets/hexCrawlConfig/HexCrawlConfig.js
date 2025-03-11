@@ -1,4 +1,5 @@
 import { defaultMoves, hexTokenTypes } from "../../constants/moveCosts.js";
+import { moduleBasePath } from "../../constants/paths.js";
 
 const hexTokenTypeChoices = {
   [hexTokenTypes.party]: "Scouting/Foraging Party",
@@ -6,7 +7,7 @@ const hexTokenTypeChoices = {
   [hexTokenTypes.none]: "None",
 };
 
-const localPath = (file) => `${moduleBasePath}views/hexCrawlConfig/${file}`;
+const localPath = (file) => `${moduleBasePath}sheets/hexCrawlConfig/${file}`;
 
 export class HexCrawlConfig extends ActorSheet {
   /**
@@ -71,6 +72,8 @@ export class HexCrawlConfig extends ActorSheet {
         ['prototypeToken.texture.scaleX']: 0.6,
         ['prototypeToken.texture.scaleY']: 0.6,
         ['prototypeToken.bar1.attribute']: null,
+        dimSight: 1,
+        brightSight: 2.5,
       } : {};
 
     await this.object.update({

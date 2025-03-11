@@ -1,10 +1,13 @@
-import { bountyInformation, bountyTypes } from "../constants/events/foraging.js";
+import { bountyTypes } from "../constants/enumsObjects.js";
+import { bountyInformation } from "../constants/events/foraging.js";
 import { herbGatheringBountyInfo } from "../constants/foraging/herbs.js";
-import { rollWeighted } from "../helpers/math.js";
+import { requestSkillCheckActionName } from "../helpers/entityTools.js";
+import { evaluateFormula, rollWeighted } from "../helpers/math.js";
 import { executeForActorsAsync } from "../socket.js";
-import { getTokenPartyMembers } from "./gameSettings.js";
+import { getPartyConfig, getTokenPartyMembers, isCampToken, isPartyToken } from "./gameSettings.js";
+import { adjustCurrentMoves } from "./moves.js";
 // import { prettyPrintJson } from "./foraging.tests.js";
-import { getTileEvents, getTileLocale } from "./tiles.js";
+import { getTileEvents, getTileLocale, updateForageData } from "./tiles.js";
 
 const calculateSkillBonus = (amountOverDC) => {
   let skillBonus = 0;
@@ -209,18 +212,19 @@ const forageNonHerbs = async (amountOverDC, locales, bountyType) => {
 
   // Calculate the final yield bonus incorporating the skill bonus
   const skillYieldBonus  = 1 + (skillBonus / 100); // Assuming base yield bonus of 1
-  const finalYieldBonus = skillYieldBonus + baseYieldBonus;
+  const finalYieldBonus = skillYieldBonus * baseYieldBonus;
 
   const foodUnitsFormula = selectedYield.foodUnits(finalYieldBonus);
   
 
-  const foodUnits = (await new Roll(foodUnitsFormula).roll()).total;
+  const foodUnits = Math.ceil(await evaluateFormula(foodUnitsFormula));
 
   // Return the full bounty with the selected yield
   return {
     type: bountyType,
     name: bountyInfo.name,
     icon: bountyInfo.icon,
+    description: selectedYield.name,
     yield: {
       name: selectedYield.name,
       foodUnits,
@@ -238,8 +242,6 @@ const processRollResults = (rollResults) => {
   let highestTotal = -Infinity;
   let keysAboveTen = [];
   let keysBelowTen = [];
-  let totalTrue = 0;
-  let totalFalse = 0;
   const DC = 10;
 
   // Loop through the object to find the highest key and create the list of keys with totals above 10
@@ -247,11 +249,9 @@ const processRollResults = (rollResults) => {
   for (const [key, { total }] of Object.entries(rollResults)) {
     const meetsDC = total >= DC;
     if (meetsDC) {
-      totalTrue++;
       keysAboveTen.push(key)
     }
     else {
-      totalFalse++;
       keysBelowTen.push(key);
     }
 
@@ -261,26 +261,27 @@ const processRollResults = (rollResults) => {
     }
   }
 
-  // assume leadBeats DC 10. If not it will filter out in next step.
-  const assistBonus = ((totalTrue - 1) * 2) - (totalFalse * 2);
+  const assists = keysAboveTen.filter(k => k !== highestKey);
+  const useless = keysBelowTen.filter(k => k !== highestKey);
+
+  const assistBonus = (assists.length * 2);
 
   return {
     leadForager: highestKey,
     leadResult: highestTotal,
-    assists: keysAboveTen.filter(k => k !== highestKey),
-    hindrences: keysBelowTen.filter(k => k !== highestKey),
+    assists,
+    useless,
     assistBonus,
     total: assistBonus + highestTotal,
   };
 };
 
-export const requestSkillCheckActionName = "requestSkillCheck";
-export const foragingSocketConfig = socket => socket.register(
-  requestSkillCheckActionName,
-  async (actor, skillname) => {
-    return await actor.rollSkill(skillname);
-  }
-);
+export const foragingSocketConfig = socket => {
+  socket.register(
+    forageBountyActionName,
+    forageBounty,
+  );
+};
 
 export const getForagingBounty = async (tile) => {
   const locales = getTileLocale(tile);
@@ -289,7 +290,8 @@ export const getForagingBounty = async (tile) => {
   return wrapBountyAsEvent(bountyInformation[bounty]);
 };
 
-export const forageBounty = async (tile, token) => {
+export const forageBountyActionName = 'forageBounty';
+export const forageBounty = async (tile, token, cost) => {
   const bountyType = getTileEvents(tile)?.forage?.type;
 
   if (!bountyType) {
@@ -300,30 +302,49 @@ export const forageBounty = async (tile, token) => {
   const survival = "sur";
 
   const partyActors = getTokenPartyMembers(token)
-    .map(actorId => game.actors.get(actorId))
-    .filter(actor => (actor.system?.skills[survival]?.rank ?? 0) > 0);
+    .filter(actorId => (game.actors.get(actorId)?.system?.skills[survival]?.rank ?? 0) > 0)
+    .map(actor => actor.id);
   const rolls = await executeForActorsAsync(requestSkillCheckActionName, partyActors, survival);
+
+  if (!rolls) {
+    ui.notifications.info("no roll data, forage canceled.");
+  }
+
+  const partyConfig = getPartyConfig(token);
+  
+  if (isCampToken(token) || partyConfig.total > 0) {
+    rolls['Refugees'] = await new Roll('1d20 + 6').roll();
+  }
 
   const survivalCheck = processRollResults(rolls);
   const amountOverDC = survivalCheck.total - 10;
+  survivalCheck.extraForagerBonus = Math.max((partyConfig.foragers ?? 0) - 1, 0) * 2;
+  const bonusWithForagers = survivalCheck.extraForagerBonus + amountOverDC;
 
-  if (amountOverDC < 0) {
-    return { ...unsuccessfulForage };
-  }
+  const bounty = (amountOverDC < 0)
+  ? Promise.resolve({ ...unsuccessfulForage })
+  : (bountyType === bountyTypes.herb
+    ? await gatherHerbs(bonusWithForagers, locales)
+    : await forageNonHerbs(bonusWithForagers, locales, bountyType));
 
-  const bounty = bountyType === bountyTypes.herb
-    ? gatherHerbs(amountOverDC, locales)
-    : forageNonHerbs(amountOverDC, locales, bountyType);
+  const forageEvent = wrapBountyAsEvent(await bounty, survivalCheck, cost);
+  await adjustCurrentMoves(token, -1 * cost, true);
 
-  return wrapBountyAsEvent(await bounty, survivalCheck);
-}
+  return await updateForageData(tile, forageEvent);
+};
 
-const wrapBountyAsEvent = (bounty, survivalCheck = null) => {
+const wrapBountyAsEvent = (bounty, survivalCheck = null, cost) => {
   return {
     ...bounty,
     isImmediate: true,
     isRepeatable: false,
-    ...(survivalCheck ? { survivalCheck } : {}),
+    ...(survivalCheck ? { 
+      survivalCheck,
+      isComplete: true,
+    } : {
+      isComplete: false,
+    }),
     isForaging: true,
+    cost,
   }
 }

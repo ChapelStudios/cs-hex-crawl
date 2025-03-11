@@ -16,7 +16,9 @@
         {{radioBoxes 'hexTokenType' hexTokenTypeChoices checked=currentPartyType}}
       </div>
     </header>
-    <label>Reset Prototype Token Config?</label>
-    <input type="checkbox" name="shouldResetConfig" {{checked shouldResetConfig}}>
+    <div class="cs-hex-token-config-container">
+      <label>Reset Prototype Token Config?</label>
+      <input type="checkbox" name="shouldResetConfig" {{checked shouldResetConfig}}>
+    </div>
   </form>
 </div>

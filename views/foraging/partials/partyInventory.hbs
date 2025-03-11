@@ -1,0 +1,17 @@
+{{#if isPartyDetailShown}}
+<div class="party-inv-details">
+  <h2>Party Inventory</h2>
+  <div class="party-row">
+    <p>Current Load: {{partyInv.currentLoad}}</p>
+    <p>Heavy Load: {{partyLoadLimits.heavyLoad}}</p>
+  </div>
+  <div class="party-row">
+    <p>Food Units: {{partyInv.foodUnits}}</p>
+    <p>Total Weight: {{totalWeightParty}}lb</p>
+  </div>
+  <div class="party-row">
+    <p>Medicine: {{partyInv.medicine}}</p>
+    <p>Spices: {{partyInv.spices}}</p>
+  </div>
+</div>
+{{/if}}

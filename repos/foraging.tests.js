@@ -1,4 +1,4 @@
-import { bountyTypes } from "../constants/events/foraging.js";
+import { bountyTypes } from "../constants/enumsObjects.js";
 import { localeTypes } from "../constants/moveCosts.js";
 import { getForagingBounty } from "./foraging.js";
 

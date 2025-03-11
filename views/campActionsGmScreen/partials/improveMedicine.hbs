@@ -1,0 +1,42 @@
+<div class="activity improve-medicine">
+  <h3>{{activityTitle}}</h3>
+
+  {{#if errorMessage}}
+    <p class="error-message">{{errorMessage}}</p>
+  {{else}}
+    {{#if performers.length}}
+      <p><strong>Skills:</strong>
+        {{#each skills}}
+          <div>
+            {{displayWithRank}}
+          </div>
+        {{else}}
+          <em>No skills available</em>
+        {{/each}}
+      </p>
+
+      <p><strong>Performers:</strong> 
+        {{#each performers}}
+          {{name}} (ID: {{actorId}})
+        {{/each}}
+      </p>
+      <p><strong>Aides:</strong>
+        {{#each aides}}
+          {{name}} (Skill: {{skillDisplay}}, DC: {{dc}})
+        {{/each}}
+      </p>
+
+      <button type="button" class="roll-button" data-activity-id="{{id}}">
+        Roll for Improve Medicine
+      </button>
+
+      <div class="results-section hidden">
+        <p class="performer-result"></p>
+        <ul class="aide-results"></ul>
+        <p class="final-result"></p>
+      </div>
+    {{else}}
+      {{> noPerformersWarning activityTitle=activityTitle }}
+    {{/if}}
+  {{/if}}
+</div>

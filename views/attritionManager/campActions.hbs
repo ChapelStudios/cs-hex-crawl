@@ -1,0 +1,103 @@
+<div class="camp-actions">
+  <h2>Camp Actions</h2>
+
+  <!-- Improve Medicine -->
+  <div class="camp-action">
+    <label>
+      <input type="checkbox" name="improveMedicine">
+      Improve Medicine
+    </label>
+  </div>
+
+  <!-- Heal the Infirm -->
+  <div class="camp-action">
+    <label>
+      Heal the Infirm:
+      <input type="number" name="healInfirm" min="0" value="0">
+    </label>
+  </div>
+
+  <!-- Perform Miracles -->
+  <div class="camp-action">
+    <label>
+      Perform Miracles:
+      <input type="number" name="performMiracles" min="0" value="0">
+    </label>
+  </div>
+
+  <!-- Cook with Gathered Firewood -->
+  <div class="camp-action">
+    <label>
+      <input type="checkbox" name="cook" class="cook-checkbox">
+      Cook
+    </label>
+    <label class="sub-action">
+      <input type="checkbox" name="gatheredFirewood" class="firewood-checkbox" disabled>
+      Gathered Firewood
+    </label>
+  </div>
+
+  <!-- Create Weapons -->
+  <div class="camp-action">
+    <label>
+      Create Weapons:
+      <input type="number" name="createWeapons" min="0" value="0">
+    </label>
+  </div>
+
+  <!-- Organize the Foragers -->
+  <div class="camp-action">
+    <label>
+      Organize the Foragers:
+      <input type="number" name="organizeForagers" min="0" value="0">
+    </label>
+  </div>
+
+  <!-- Check into a Faction -->
+  <div class="camp-action">
+    <h3>Check into a Faction</h3>
+    {{#each factions}}
+    <div class="faction-action">
+      <label>
+        {{this}}:
+        <input type="number" name="faction-{{@key}}" min="0" value="0">
+      </label>
+    </div>
+    {{/each}}
+    <div class="faction-additional">
+      <label>
+        <input type="checkbox" name="influenceFactionLeader">
+        Influence the Faction Leader
+      </label>
+      <label>
+        <input type="checkbox" name="gatheredFirewoodFaction">
+        Gathered Firewood
+      </label>
+    </div>
+  </div>
+
+  <!-- Set Perimeter -->
+  <div class="camp-action">
+    <label>
+      <input type="checkbox" name="setPerimeter">
+      Set Perimeter
+    </label>
+  </div>
+
+  <!-- Far Sight -->
+  <div class="camp-action">
+    <label>
+      Far Sight:
+      <button type="button" class="far-sight-button">Use</button>
+      <span class="far-sight-counter">0</span>
+    </label>
+  </div>
+
+  <!-- Illusory Intervention -->
+  <div class="camp-action">
+    <label>
+      <input type="checkbox" name="illusoryIntervention">
+      Illusory Intervention
+    </label>
+  </div>
+</div>
