@@ -1,6 +1,6 @@
-import { prettyPrintJson } from "../HexCrawl/repos/foraging.tests.js";
+//import { prettyPrintJson } from "../HexCrawl/repos/foraging.tests.js";
 
-class Roll {
+globalThis.Roll = class {
   constructor(formula) {
     this.formula = formula;
   }
@@ -39,5 +39,3 @@ class Roll {
     return Promise.resolve({ total });
   }
 };
-// console.log('test');
-globalThis.Roll = Roll;

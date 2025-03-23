@@ -1,0 +1,799 @@
+import { campActionsData } from "../../constants/campActions/index.js";
+import { artPath, moduleCodePath } from "../../constants/paths.js";
+import { loadStylesheet } from "../../helpers/display.js";
+import { getSelectOptionFromSkill, sortSkillOptions } from "../../helpers/entityTools.js";
+import { getCurrentDay } from "../../repos/gameClock.js";
+import { campActionsAppId, getCampToken, getCurrentCampActions, getPartyMemberList, getUserActionsForDay, refreshCampActionsHandlerName, saveActionsRequestActionName, updateCurrentCampActions } from "../../repos/gameSettings.js";
+import { getProvisions } from "../../repos/provisions.js";
+import { dl3HexCrawlSocket, notifyGmWarningActionName } from "../../socket.js";
+
+const localPath = (file) => `${moduleCodePath}views/campActions/${file}`;
+
+export class CampActions extends FormApplication {
+  constructor(scene, data, options) {
+    super(scene, options);
+
+    // Core setup
+    this.currentDay = data.currentDay;
+    this.assignedActor = data.assignedActor;
+    this.options.title = `Camp Actions - ${data.assignedActor.name}`;
+
+    // Activity management
+    this.activities = data.activities || [];
+    this.completedActions = {};
+    this.aids = {};
+    this.lockedActivities = {};
+
+    // Hour tracking
+    this.selectedHours = 0;
+    this.maxHours = 6;
+
+    // Global state
+    this.globalCompletedActions = data.globalCompletedActions || {};
+
+    // Load the stylesheet
+    loadStylesheet(localPath("campActions.css"));
+  }
+
+  // Merge parent options with our defaults.
+  static get defaultOptions() {
+    return mergeObject(super.defaultOptions, {
+      id: campActionsAppId,
+      template: localPath("campActions.hbs"),
+      title: "Camp Actions",
+      width: "auto",
+      height: "auto",
+    });
+  }
+
+  // Prepares the form data for rendering
+  getData() {
+    this.globalCompletedActions = getCurrentCampActions(this.object);
+    const activities = this.activities.map(activity => this._prepareActivity(activity));
+    return {
+      activities,
+      maxHours: this.maxHours,
+      checkmarkImage: artPath("checkmark.png"),
+      selectedHours: this.selectedHours,
+      isGM: game.user.isGM,
+    };
+  }
+  
+  // Prepares a single activity with enriched data and UI-specific properties
+  _prepareActivity(activity) {
+    const enriched = this._getEnrichedActivity(activity);
+    const performSkillChoices = this._generateSkillChoices(enriched.skills, 'perform');
+    const aidSkillChoices = this._generateSkillChoices(enriched.aidSkills, 'aid');
+    const completedCount = this._getCompletedCount(activity);
+
+    return {
+      ...enriched,
+      performSkillChoices,
+      aidSkillChoices,
+      hasValidPerformSkills: performSkillChoices.some(choice => !choice.disabled),
+      hasValidAidSkills: aidSkillChoices.some(choice => !choice.disabled),
+      completedCount,
+      hasPerformed: completedCount > 0,
+    };
+  }
+
+  // Enriches an activity with additional context
+  _getEnrichedActivity(activity) {
+    return {
+      ...activity,
+      ...activity.getSelectionData?.(this._getEnrichedActivityContext(activity)) || {},
+    };
+  }
+
+  // Creates the context needed for enriching an activity
+  _getEnrichedActivityContext(activity) {
+    return {
+      activity,
+      provisions: getProvisions(getCampToken(canvas.scene)),
+      assignedActor: this.assignedActor,
+    };
+  }
+
+  _generateSkillChoices(skills, type) {
+    return (skills || [])
+      .map(skill => getSelectOptionFromSkill(this.assignedActor, skill, type))
+      .sort(sortSkillOptions);
+  }
+  
+  // Retrieves the count of completed actions for an activity
+  _getCompletedCount(activity) {
+    const dayActions = getUserActionsForDay(canvas.scene, this.currentDay);
+    const record = dayActions.find(record => record.id === activity.id);
+    return record?.timesPerformed || 0;
+  }
+  
+  // Binds all event listeners to the HTML
+  async activateListeners(html) {
+    super.activateListeners(html);
+
+    // Listen for global state updates
+    // TODO: only register if unregistered, check socketLib documentation
+    dl3HexCrawlSocket.register(refreshCampActionsHandlerName, async data => {
+      this.globalCompletedActions = data;
+      await this.updateUI(html);
+    });
+
+    // Event listeners
+    html.on("click", ".cs-dl3-activity-action", event => this._handlePerformAction(event, html));
+    html.on("click", ".cs-dl3-aid-another-action", async event => await  this._handleAidAction(event, html));
+    html.on("click", ".cs-dl3-activity-title, .cs-dl3-details-toggle", event => this._toggleDetails(event));
+    html.on("click", ".cs-dl3-checkmark", event => this._handleUnselectAction(event, html));
+    html.on("click", ".cs-dl3-clear-button", async () => {
+      await this.cleanupGlobalState();
+      await this.updateUI(html);
+    });
+    html.on("click", ".cs-dl3-clear-global-button", async () => {
+      if (!game.user.isGM) return;
+      await updateCurrentCampActions(this.object, null); // Clear global state
+      this.globalCompletedActions = {};
+      dl3HexCrawlSocket.executeForOthers(refreshCampActionsHandlerName);
+      await this.updateUI(html);
+    });
+
+    await this.updateUI(html);
+  }
+  
+  // Event handler: Perform an action
+  async _handleUnselectAction(event, html) {
+    event.stopPropagation();
+    const actionIndex = parseInt($(event.currentTarget).data("action-index"), 10);
+    const isAid = $(event.currentTarget).data("aid");
+    const activity = this.activities[actionIndex];
+
+    // Prevent unselection for locked actions
+    if (this.lockedActivities && this.lockedActivities[actionIndex]) return;
+
+    const eventData = {
+        actionIndex,
+        isAid,
+        activity,
+        currentActorName: this.assignedActor?.name,
+        aidCount: this.aids[actionIndex],
+        completedValue: this.completedActions[actionIndex],
+        globalAction: this.globalCompletedActions[activity?.id] || {}
+    };
+
+    await this._processUnselection(eventData);
+    await this.updateUI(html); // Refresh the UI
+  }
+
+  async _processUnselection({ actionIndex, isAid, activity, currentActorName, aidCount, completedValue, globalAction }) {
+    if (isAid && ((aidCount ?? 0) > 0)) {
+        this.aids[actionIndex]--;
+        this.selectedHours -= activity.timeCost;
+
+        const updatedHelpers = (globalAction.helpers || []).filter(helper => helper !== currentActorName);
+        this.globalCompletedActions[activity.id] = { ...globalAction, helpers: updatedHelpers };
+    } 
+    else if (!isAid && ((completedValue ?? 0) > 0)) {
+      this.completedActions[actionIndex]--;
+      this.selectedHours -= activity.timeCost;
+
+      const currentGlobal = globalAction || { performers: {}, helpers: [] };
+      const currentCount = currentGlobal.performers[currentActorName] || 0;
+
+      if (currentCount > 0) {
+          currentGlobal.performers[currentActorName] = currentCount - 1;
+      }
+
+      await updateCurrentCampActions(this.object, this.globalCompletedActions);
+      dl3HexCrawlSocket.executeForOthers(refreshCampActionsHandlerName);
+    }
+    else {
+      const warningMessage = `
+          Warning for GM: Unselection failed due to unexpected value combination.
+          Action Index: ${actionIndex}
+          Is Aid: ${isAid}
+          Activity: ${activity ? activity.name : 'Unknown'}
+          Aids Value: ${aidCount}
+          Completed Value: ${completedValue}
+          Current Actor: ${currentActorName}
+      `;
+
+      // Send warning to GM only via socket
+      if (game.user.isGM) {
+          ui.notifications.warn(warningMessage);
+      } else {
+          dl3HexCrawlSocket.executeAsGM(notifyGmWarningActionName, warningMessage);
+      }
+    }
+  }
+
+  // Event handler: Aid another action
+  async _handleAidAction(event, html) {
+    const actionIndex = parseInt($(event.currentTarget).data("action-index"), 10);
+    const activity = this.activities[actionIndex];
+
+    const selectedSkill = $(event.currentTarget).find(".cs-dl3-aid-skill-select").val();
+
+    await this.updateGlobalState(activity.id, 0, selectedSkill, true);
+    this.aids[actionIndex] = (this.aids[actionIndex] || 0) + 1;
+    await this.updateUI(html);
+  }
+
+  // Event handler: Toggle the details view
+  _toggleDetails(event) {
+    const activityElem = $(event.currentTarget).closest(".cs-dl3-activity");
+    const details = activityElem.find(".cs-dl3-activity-details");
+    details.toggleClass("cs-dl3-hidden");
+
+    const toggleIcon = activityElem.find(".cs-dl3-details-toggle i");
+    toggleIcon.toggleClass("fa-circle-caret-up fa-circle-caret-down", details.hasClass("cs-dl3-hidden"));
+  }
+
+  // Updates the UI elements dynamically
+  async updateUI(html) {
+    const elements = html.find(".cs-dl3-activity").toArray();
+
+    for (let index = 0; index < elements.length; index++) {
+        const element = elements[index];
+        const activity = this._getEnrichedActivity(this.activities[index]);
+        const globalState = this.globalCompletedActions[activity.id];
+
+        this._updateSkillOptions(element, activity);
+        this._updateGlobalHelpers(element, globalState);
+        this._updateButtons(element, activity, globalState, index);
+        this._updateCheckmarks(element, index);
+        await this._toggleAidSection(element, activity);
+    }
+
+    this._activateLockedState(html);
+    return html;
+  }
+
+  _updateSkillOptions(element, activity) {
+    const performChoices = this._generateSkillChoices(activity.skills, 'perform');
+    const aidChoices = this._generateSkillChoices(activity.aidSkills, 'aid');
+  
+    const allPerformDisabled = !performChoices.some(choice => !choice.disabled);
+    const allAidDisabled = !aidChoices.some(choice => !choice.disabled);
+  
+    $(element).data("perform-disabled", allPerformDisabled);
+    $(element).data("aid-disabled", allAidDisabled);
+  }
+
+  _updateGlobalHelpers(element, globalState) {
+    const parent = $(element).find(".cs-dl3-activity-options");
+    let aidRow = parent.find(".cs-dl3-aid-helpers-row");
+    if (!aidRow.length) {
+      aidRow = $("<div>", { class: "cs-dl3-aid-helpers-row" });
+      parent.append(aidRow);
+    }
+    
+    let performedMessage = "";
+    let aidedMessage = "";
+  
+    if (globalState) {
+      if (globalState.performers) {
+        const validPerformers = Object.entries(globalState.performers).reduce((acc, [name, count]) => {
+          if (count > 0) acc.push(count > 1 ? `${name} x${count}` : name);
+          return acc;
+        }, []);
+        if (validPerformers.length > 0) {
+          performedMessage = `<strong>Performed by:</strong> ${validPerformers.join(", ")}`;
+        }
+      }
+      if (globalState.helpers && globalState.helpers.length > 0) {
+        const helperDetails = globalState.helpers.map(helper => {
+          const skillDisplay = helper.skillDisplay || "Unknown Skill"; // Add skill display name
+          return `${helper.name} (${skillDisplay})`; // Name and skill
+        });
+        aidedMessage = `<strong>Aided by:</strong> ${helperDetails.join(", ")}`;
+      }
+    }
+    
+    let aidMessage = "";
+    if (performedMessage && aidedMessage) {
+      aidMessage = performedMessage + "<br/>" + aidedMessage;
+    } else {
+      aidMessage = performedMessage || aidedMessage;
+    }
+    
+    if (aidMessage) {
+      aidRow.html(aidMessage).show();
+      return aidRow;
+    } else {
+      aidRow.remove();
+      return null;
+    }
+  }
+
+  _updateCheckmarks(element, index) {
+    const checkmarkContainer = $(element).find(".cs-dl3-checkmark-container");
+    checkmarkContainer.empty();
+  
+    const completedCount = this.completedActions[index] || 0;
+    for (let i = 0; i < completedCount; i++) {
+      checkmarkContainer.append(
+        `<img src="${artPath("checkmark.png")}" 
+              class="cs-dl3-checkmark" 
+              data-action-index="${index}" 
+              alt="Performed" 
+              style="cursor:pointer;">`
+      );
+    }
+  
+    const aidCount = this.aids[index] || 0;
+    for (let i = 0; i < aidCount; i++) {
+      checkmarkContainer.append(
+        `<img src="${artPath("checkmark.png")}" 
+              class="cs-dl3-checkmark cs-dl3-aid-checkmark" 
+              data-action-index="${index}" 
+              data-aid="true" 
+              alt="Aided" 
+              style="cursor:pointer;">`
+      );
+    }
+  }
+
+  _updateButtons(element, activity, globalState, index) {
+    const wouldExceedMaxHours = (this.selectedHours + activity.timeCost) > this.maxHours;
+    const actionMaxReached = (this.completedActions[index] || 0) >= (this.maxUses || Infinity);
+  
+    // Calculate performance count in a unified manner
+    let globalCount = 0;
+    if (globalState?.performers) {
+      if (activity.useIndependentTracking) {
+        globalCount = globalState.performers[this.assignedActor?.name] || 0;
+      } else {
+        globalCount = Object.values(globalState.performers).reduce((sum, count) => sum + count, 0);
+      }
+    }
+  
+    // Disable perform and aid buttons based on conditions
+    const disablePerform = !activity.repeatable &&
+      (!activity.useIndependentTracking && globalCount > 0) ||
+      wouldExceedMaxHours || $(element).data("perform-disabled") || actionMaxReached;
+  
+    const disableAid = 
+      (globalState?.helpers?.includes(this.assignedActor?.name)) ||
+      wouldExceedMaxHours ||
+      $(element).data("aid-disabled") ||
+      globalCount === 0;
+  
+    const performButton = $(element).find(".cs-dl3-activity-action");
+    const performSelect = $(element).find(".cs-dl3-skill-select");
+    const aidButton = $(element).find(".cs-dl3-aid-another-action");
+    const aidSelect = $(element).find(".cs-dl3-aid-skill-select");
+  
+    performButton.prop("disabled", disablePerform).toggleClass("cs-dl3-disabled", disablePerform);
+    performSelect.prop("disabled", disablePerform).toggleClass("cs-dl3-disabled", disablePerform);
+    aidButton.prop("disabled", disableAid).toggleClass("cs-dl3-disabled", disableAid);
+    aidSelect.prop("disabled", disableAid).toggleClass("cs-dl3-disabled", disableAid);
+  
+    // Update the perform button or div text based on global state
+    const defaultPerformButtonText = "Perform Action";
+    let performText = defaultPerformButtonText;
+    if (globalState?.performers) {
+      const performerEntries = Object.entries(globalState.performers)
+        .filter(([name, count]) => count > 0)
+        .map(([name, count]) => (count > 1 ? `${name} x${count}` : name));
+  
+      if (performerEntries.length > 0) {
+        performText = "Performed by: " + performerEntries.join(", ");
+      }
+    }
+  
+    // Handle `repeatable` and `useIndependentTracking` cases
+    const infoDiv = $(element).find(".cs-dl3-aid-helpers-row");
+    const helpers = (globalState?.helpers || []).join(", ");
+    if (activity.useIndependentTracking && activity.repeatable) {
+      // Show div with "Aided by", leave button at default
+      infoDiv.html(`<strong>Aided by:</strong> ${helpers}`)
+        .show();
+      performButton.text(defaultPerformButtonText);
+
+    } else if (activity.useIndependentTracking && !activity.repeatable) {
+      // Show div with "Performed by", leave button at default
+      performButton.text(defaultPerformButtonText);
+      infoDiv.html(performText).show();
+    } else if (!activity.useIndependentTracking && activity.repeatable) {
+      // Show div for "Aided by" with "Performed by", leave button at default
+      infoDiv.html(`<strong>Aided by:</strong> ${helpers}<br />${performText}`).show();
+      infoDiv.hide();
+      performButton.text(defaultPerformButtonText);
+    } else {
+      // Neither repeatable nor useIndependentTracking: update button text, hide div
+      infoDiv.html('')
+        .hide();
+      performButton.text(performText);
+    }
+  }
+
+  async _toggleAidSection(element, activity) {
+    const aidContainer = $(element).find(".cs-dl3-aid-another-container");
+    const infoDiv = $(element).find(".cs-dl3-aid-helpers-row");
+
+    
+    // Check if any performers exist for this activity
+    const currentGlobal = this.globalCompletedActions[activity.id] || { performers: {}, helpers: [] };
+    const performersExist = Object.keys(currentGlobal.performers).length > 0;
+
+    if (!performersExist) {
+      // Trigger unselect logic for the helper
+      ui.notifications.info(`No performers available. Your aid is no longer valid.`);
+      const actionIndex = this.activities.findIndex(act => act.id === activity.id);
+      
+      const eventData = {
+        actionIndex,
+        isAid: true,
+        activity,
+        currentActorName: this.assignedActor?.name,
+        aidCount: this.aids[actionIndex],
+        completedValue: this.completedActions[actionIndex],
+        globalAction: this.globalCompletedActions[activity?.id] || {}
+      };
+
+      await this._processUnselection(eventData, this.element); // Reuse unselect logic
+      return;
+    }
+  
+    if (!activity.aidSkills || activity.aidSkills.length === 0) {
+      aidContainer.addClass("cs-dl3-hidden");
+      infoDiv.hide(); // Ensure the info div is hidden when aid is not available
+    } else {
+      aidContainer.removeClass("cs-dl3-hidden");
+      infoDiv.show(); // Show the info div if aid skills exist
+    }
+  }
+  
+  _activateLockedState(html) {
+    this.activities.forEach((activity, index) => {
+      const checkmark = html.find(`.cs-dl3-checkmark[data-action-index='${index}']`);
+      
+      // Check if the activity is locked
+      if (this.lockedActivities[index]) {
+        checkmark.closest('.cs-dl3-completed-checkbox').addClass('cs-dl3-checkbox-locked');
+      } else {
+        checkmark.closest('.cs-dl3-completed-checkbox').removeClass('cs-dl3-checkbox-locked');
+      }
+    });
+  }
+
+  // Updates the global state for an activity
+  async updateGlobalState(activityId, count, isAid = false, useIndependentTracking = false) {
+    const currentActions = this.globalCompletedActions || getCurrentCampActions(this.object);
+    const performer = this.assignedActor?.name || "Unknown Actor";
+  
+    currentActions[activityId] = this._updateTrackingActivity(currentActions[activityId], performer, isAid);
+
+    await updateCurrentCampActions(this.object, currentActions);
+    this.globalCompletedActions = currentActions;
+  
+    await this.updateUI(this.element);
+    dl3HexCrawlSocket.executeForOthers(refreshCampActionsHandlerName);
+  }
+
+  // Cleans up global state on closing
+  async cleanupGlobalState() {
+    const currentActions = this.globalCompletedActions || getCurrentCampActions(this.object);
+
+    // Reset global actions and clean up performer/helper data
+    Object.keys(currentActions).forEach(activityId => {
+      const action = currentActions[activityId];
+
+      // Reset performed actions by this actor
+      if (action.performers && action.performers[this.assignedActor?.name]) {
+        // Set count to 0 instead of deleting
+        action.performers[this.assignedActor.name] = 0;
+      }
+
+      // Remove current actor from helper arrays or set count to 0
+      if (action.helpers?.includes(this.assignedActor?.name)) {
+        const updatedHelpers = action.helpers.filter(helper => helper !== this.assignedActor?.name);
+        currentActions[activityId] = {
+          ...action,
+          helpers: updatedHelpers.length > 0 ? updatedHelpers : [], // Retain helpers list
+        };
+      }
+
+      // If the action has no meaningful performers/helpers, still retain structure
+      if (
+        (!action.performers || Object.values(action.performers).every(count => count === 0)) &&
+        (!action.helpers || action.helpers.length === 0)
+      ) {
+        currentActions[activityId] = {
+          ...action,
+          performers: { ...(action.performers || {}) }, // Keep structure
+        };
+      }
+    });
+
+    // Update the globalCompletedActions state in game settings
+    await updateCurrentCampActions(this.object, currentActions);
+    dl3HexCrawlSocket.executeForOthers(refreshCampActionsHandlerName);
+  }
+
+  async _updateObject(event, formData) {
+    const results = {
+      day: this.currentDay,
+      id: this.assignedActor.id,
+      name: this.assignedActor.name,
+      selectedActivities: this.activities
+        .map((activity, index) => {
+          const timesPerformed = this.completedActions[index] || 0;
+          const selectedSkill = formData[`skill-${index}`]
+            ? activity.skills?.find(skill => skill.skill === formData[`skill-${index}`])
+            : null;
+  
+          return {
+            id: activity.id,
+            skill: selectedSkill,
+            timesPerformed,
+            aidSkillUsed: formData[`aid-skill-${index}`]
+              ? activity.aidSkills?.find(skill => skill.skill === formData[`aid-skill-${index}`])
+              : null,
+            hasCustomAction: typeof activity.onUserPerform === "function",
+          };
+        })
+        .filter(activity => activity.timesPerformed > 0 && !activity.hasCustomAction),
+    };
+  
+    // Save the results to the server
+    await dl3HexCrawlSocket.executeAsGM(saveActionsRequestActionName, this.object, results);
+  }
+
+  // For independent tracking: counts per performer.
+  _updateTrackingActivity(currentState, performer, isAid = false) {
+    // Always use both properties regardless of the activity’s settings
+    if (!currentState) {
+      currentState = { performers: {}, helpers: [] };
+    } else {
+      // Ensure both properties exist in case of legacy data
+      if (!currentState.performers) currentState.performers = {};
+      if (!currentState.helpers) currentState.helpers = [];
+    }
+    if (isAid) {
+      if (!currentState.helpers.includes(performer)) {
+        currentState.helpers.push(performer);
+      }
+    } else {
+      currentState.performers[performer] = (currentState.performers[performer] || 0) + 1;
+    }
+    return currentState;
+  }
+  
+
+  async render(force = false, options = {}) {
+    const result = super.render(force, options);
+    this.globalCompletedActions = getCurrentCampActions(this.object);
+    await this.updateUI(this.element);
+  
+    // Allow the DOM to fully update its layout
+    setTimeout(() => {
+      // Find the form element inside our application
+      const formElement = this.element.find('form.cs-dl3-camp-actions')[0];
+  
+      if (formElement) {
+        // Calculate the desired width based on the form's scroll width and add some padding.
+        // This ensures that any content going off to the right is included.
+        const desiredWidth = formElement.scrollWidth + 40; // 40px of extra padding
+  
+        // Also, don't let the window become wider than the viewport (with a margin)
+        const newWidth = Math.min(desiredWidth, window.innerWidth - 50);
+  
+        // Update the window's position/size with the new width
+        this.setPosition({ width: newWidth });
+      }
+    }, 50); // A short delay (50ms) allows the initial layout to settle
+  
+    return result;
+  }
+
+  async close(options = {}) {
+    await this.cleanupGlobalState();
+    return super.close(options);
+  }
+}
+
+
+// Function to show a dialog for selecting an actor
+const showActorSelectionDialog = (partyMembers) => {
+  return new Promise((resolve) => {
+    new Dialog({
+      title: "Select Actor for Camp Actions",
+      content: `
+        <form>
+          <div class="form-group">
+            <label for="actor-select">Choose an Actor:</label>
+            <select id="actor-select" name="actor">
+              ${partyMembers
+                .map(
+                  (actor) =>
+                    `<option value="${actor.id}">${actor.name}</option>`
+                )
+                .join("")}
+            </select>
+          </div>
+        </form>
+      `,
+      buttons: {
+        confirm: {
+          label: "Confirm",
+          callback: (html) => {
+            const actorId = html.find("#actor-select").val();
+            resolve(actorId); // Resolve with the selected actor ID
+          },
+        },
+        cancel: {
+          label: "Cancel",
+          callback: () => {
+            resolve(null); // Resolve with null if cancelled
+          },
+        },
+      },
+      default: "confirm",
+    }).render(true);
+  });
+};
+
+export const launchCampActions = async (scene, token) => {
+  // Get the actor assigned to the user
+  const assignedActor = game.actors.get(game.user.character?.id);
+
+  // If no assigned actor and user is GM, prompt for selection
+  if (!assignedActor && game.user.isGM) {
+    const partyMembers = getPartyMemberList(); // Use this function to get the party member list
+
+    if (!partyMembers || partyMembers.length === 0) {
+      ui.notifications.warn("No party members available to select.");
+      return false;
+    }
+
+    // Show dialog to select an actor
+    const actorId = await showActorSelectionDialog(partyMembers);
+
+    // If no actor was selected, cancel the operation
+    if (!actorId) {
+      ui.notifications.error("No valid actor selected.");
+      return false;
+    }
+
+    const selectedActor = game.actors.get(actorId);
+
+    const campActionsManager = new CampActions(scene, {
+      activities: campActionsData,
+      assignedActor: selectedActor,
+      currentDay: getCurrentDay(token),
+      globalCompletedActions: getCurrentCampActions(scene),
+    }).render(true);
+
+    return campActionsManager;
+  }
+
+  // If an actor is already assigned or the user is not a GM, proceed as normal
+  if (!assignedActor) {
+    ui.notifications.error("You must be assigned an actor to use Camp Actions.");
+    return false;
+  }
+
+  const campActionsManager = new CampActions(scene, {
+    activities: campActionsData,
+    assignedActor,
+    currentDay: getCurrentDay(token),
+    globalCompletedActions: getCurrentCampActions(scene),
+  }).render(true);
+
+  return campActionsManager;
+};
+
+
+const oldUpdateUI = (html) => {
+  html.find(".cs-dl3-activity").each((index, element) => {
+    // Enrich the activity data once here.
+    const activity = this._getEnrichedActivity(this.activities[index]);
+    const performButton = $(element).find(".cs-dl3-activity-action");
+    const performSelect = $(element).find(".cs-dl3-skill-select");
+    const aidButton = $(element).find(".cs-dl3-aid-another-action");
+    const aidSelect = $(element).find(".cs-dl3-aid-skill-select");
+
+    // Global state for this activity.
+    const globalState = this.globalCompletedActions[activity.id];
+
+    // Update the perform button's text.
+    const performerName =
+      globalState?.performerName && !activity.useIndependentTracking
+        ? `Performer: ${globalState.performerName}`
+        : "Perform Action";
+    performButton.text(performerName);
+
+    // Independent tracking: Display performer names.
+    if (activity.useIndependentTracking) {
+      let performerNamesDiv = $(element).find(".cs-dl3-performer-names");
+      if (!performerNamesDiv.length) {
+        performerNamesDiv = $('<div class="cs-dl3-performer-names"></div>');
+        $(element).find(".cs-dl3-perform-container").after(performerNamesDiv);
+      }
+      let performerList = [];
+      if (globalState) {
+        if (Array.isArray(globalState.performers)) {
+          performerList = globalState.performers;
+        } else if (globalState.performerName) {
+          performerList = [globalState.performerName];
+        }
+      }
+      performerNamesDiv.text(performerList.length > 0 ? "Performed by: " + performerList.join(", ") : "");
+    } else {
+      $(element).find(".cs-dl3-performer-names").remove();
+    }
+
+    // Update aid helpers section.
+    const aidRow = $(element).find(".cs-dl3-aid-helpers-row");
+    const helpers = globalState?.helpers || [];
+    aidRow.html(helpers.length > 0 ? `<strong>Aided by:</strong> ${helpers.join(", ")}` : "");
+
+    // Compute select option validity using our helper.
+    const validPerformChoices = (activity.skills || []).map(skill =>
+      getSelectOptionFromSkill(this.assignedActor, skill, 'perform')
+    ).sort(sortSkillOptions);
+    const validAidChoices = (activity.aidSkills || []).map(skill =>
+      getSelectOptionFromSkill(this.assignedActor, skill, 'aid')
+    ).sort(sortSkillOptions);
+    const allPerformOptionsDisabled = !validPerformChoices.some(choice => !choice.disabled);
+    const allAidOptionsDisabled = !validAidChoices.some(choice => !choice.disabled);
+    const wouldExceedMaxHours = (this.selectedHours + activity.timeCost) > this.maxHours;
+
+    const actionMaxUses = (typeof this.maxUses !== "undefined") ? this.maxUses : Infinity;
+    const currentActionUsage = this.completedActions[index] || 0;
+    const actionMaxReached = currentActionUsage >= actionMaxUses;
+    const isPerformDisabled = !activity.repeatable && (!activity.useIndependentTracking && globalState?.count > 0);
+    const disablePerform = isPerformDisabled || wouldExceedMaxHours || allPerformOptionsDisabled || actionMaxReached;
+    performButton.prop("disabled", disablePerform).toggleClass("cs-dl3-disabled", disablePerform);
+    performSelect.prop("disabled", disablePerform).toggleClass("cs-dl3-disabled", disablePerform);
+
+    const isAidDisabled =
+      !globalState?.performerName ||
+      globalState?.performerName === this.assignedActor?.name ||
+      (globalState?.helpers || []).includes(this.assignedActor?.name) ||
+      !validAidChoices.some(choice => !choice.disabled);
+    const disableAid = isAidDisabled || wouldExceedMaxHours || allAidOptionsDisabled;
+    aidButton.prop("disabled", disableAid).toggleClass("cs-dl3-disabled", disableAid);
+    aidSelect.prop("disabled", disableAid).toggleClass("cs-dl3-disabled", disableAid);
+
+    // Add the new logic: Render checkmarks for logged actions and lock actions if performed
+    const checkmarkContainer = $(element).find(".cs-dl3-checkmark-container");
+    checkmarkContainer.empty();
+    const completedCount = activity.completedCount || 0; // Use actual completed count
+    for (let i = 0; i < completedCount; i++) {
+      checkmarkContainer.append(
+        `<img src="${artPath("checkmark.png")}" 
+              class="cs-dl3-checkmark" 
+              data-action-index="${index}" 
+              alt="Performed" 
+              style="cursor:pointer;">`
+      );
+    }
+    const aidCount = this.aids[index] || 0;
+    for (let i = 0; i < aidCount; i++) {
+      checkmarkContainer.append(
+        `<img src="${artPath("checkmark.png")}" 
+              class="cs-dl3-checkmark cs-dl3-aid-checkmark" 
+              data-action-index="${index}" 
+              data-aid="true" 
+              alt="Aided" 
+              style="cursor:pointer;">`
+      );
+    }
+
+    // Lock activities that have been logged
+    if (activity.completedCount > 0) {
+      performButton.prop("disabled", true).toggleClass("cs-dl3-disabled", true);
+      performSelect.prop("disabled", true).toggleClass("cs-dl3-disabled", true);
+      aidButton.prop("disabled", true).toggleClass("cs-dl3-disabled", true);
+      aidSelect.prop("disabled", true).toggleClass("cs-dl3-disabled", true);
+    }
+
+    // Hide the Aid Section if there are no aid skills.
+    const aidContainer = $(element).find(".cs-dl3-aid-another-container");
+    if (!activity.aidSkills || activity.aidSkills.length === 0) {
+      aidContainer.addClass("cs-dl3-hidden");
+    } else {
+      aidContainer.removeClass("cs-dl3-hidden");
+    }
+  });
+}

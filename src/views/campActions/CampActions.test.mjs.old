@@ -1,0 +1,920 @@
+import mockCanvas from '../../../tests/mocks/canvas.js';
+import { loadStylesheet } from '../../helpers/display.js';
+import { dl3HexCrawlSocket } from '../../socket.js';
+import { CampActions } from './CampActions.js';
+import Handlebars from 'handlebars';
+import $ from 'jquery';
+
+global.canvas = mockCanvas;
+
+const mockContext = {
+  maxHours: 6, // Total downtime hours available
+  activities: [
+    {
+      id: 1,
+      title: "Foraging",
+      timeCost: 2,
+      repeatable: true,
+      details: "<p>Spend time gathering food and supplies.</p>",
+      errorMessage: null,
+      hasValidPerformSkills: true,
+      performSkillChoices: [
+        { value: "survival", label: "Survival (+3)", disabled: false },
+        { value: "nature", label: "Nature (+2)", disabled: false },
+      ],
+      aidSkills: true,
+      hasValidAidSkills: true,
+      aidSkillChoices: [
+        { value: "survival", label: "Survival (+3)", disabled: false },
+        { value: "perception", label: "Perception (+1)", disabled: false },
+      ],
+    },
+    {
+      id: 2,
+      title: "Repair Equipment",
+      timeCost: 3,
+      repeatable: false,
+      details: "<p>Fix damaged gear or tools.</p>",
+      errorMessage: "You lack the necessary skills to repair equipment.",
+      hasValidPerformSkills: false,
+      performSkillChoices: [],
+      aidSkills: false,
+      hasValidAidSkills: false,
+      aidSkillChoices: [],
+    },
+  ],
+};
+
+jest.mock('../../helpers/display.js', () => ({
+  loadStylesheet: jest.fn(),
+  registerPartial: jest.fn(),
+}));
+
+const mockGetSelectOptionFromSkillResult = { "disabled": false, "label": undefined, "rank": 2, "skill": undefined };
+
+jest.mock('../../helpers/entityTools.js', () => ({
+  getSelectOptionForPerform: jest.fn((skill) => ({
+    skill: skill.skill,
+    rank: skill.skill === 'Skill1' ? 3 : 2,
+    label: skill.skill,
+    disabled: false, // Or a condition if required
+  })),
+  getSelectOptionFromSkill: jest.fn((skill) => ({ ...mockGetSelectOptionFromSkillResult })),
+  disambiguateSkillCode: jest.fn((skill) => skill),
+}));
+
+jest.mock('../../socket.js', () => ({
+  dl3HexCrawlSocket: {
+    executeAsGM: jest.fn(),
+    executeForOthers: jest.fn(),
+  },
+}));
+
+jest.mock("../../repos/gameSettings.js", () => ({
+  updateCurrentCampActions: jest.fn().mockResolvedValue(),
+  // Minimal stubs for constants used in the CampActions file:
+  refreshCampActionsHandlerName: "refreshCampActionsHandlerName",
+  campActionsAppId: "campActionsAppId",
+  getCampToken: jest.fn(),
+  getCurrentCampActions: jest.fn(() => ({})),
+  getPartyMemberList: jest.fn(() => []),
+  getUserActionsForDay: jest.fn(() => []),
+  saveActionsRequestActionName: "saveActionsRequestActionName",
+}));
+
+
+describe('CampActions Class', () => {
+  let campActions;
+  let mockScene;
+  let mockData;
+  let mockOptions;
+  let mockHtml;
+
+  const getMockHtml = (template, context) => {
+    mockHtml = Handlebars.compile(template)(context);
+    return $(mockHtml);
+  }
+
+  const setDefaultMockValues = () => {
+    // Mock data for initialization
+    mockScene = { id: 'testScene' };
+    mockData = {
+      activities: [
+        { 
+          id: 1,
+          skills: [{ skill: 'Skill1' }],
+          aidSkills: [{ skill: 'Aid1' }],
+          timeCost: 2,
+          getSelectionData: () => ({}),
+        },
+      ],
+      currentDay: 1,
+      assignedActor: {
+        id: 'Actor1',
+        name: 'Hero',
+        system: {
+          abilities: { Skill1: { rank: 1 } },
+          skills: { Skill1: { rank: 1 } },
+        },
+      },
+      globalCompletedActions: {},
+    };
+    mockOptions = {};
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = "";
+
+    setDefaultMockValues();
+
+    campActions = new CampActions(mockScene, mockData, mockOptions);
+  });
+
+  afterEach(() => {
+    mockHtml = null;
+    document.body.innerHTML = "";
+    setDefaultMockValues();
+    jest.restoreAllMocks();
+  });
+
+  describe('constructor', () => {
+    it('should initialize with correct properties', () => {
+      expect(campActions.currentDay).toBe(1);
+      expect(campActions.activities).toHaveLength(1);
+      expect(campActions.maxHours).toBe(6);
+      expect(loadStylesheet).toHaveBeenCalledWith(expect.stringContaining('campActions.css'));
+
+    });
+  });
+
+  describe('_getEnrichedActivity', () => {
+    it('should enrich an activity correctly', () => {
+      const activity = campActions._getEnrichedActivity(mockData.activities[0]);
+      expect(activity).toHaveProperty('skills');
+      expect(activity).toHaveProperty('aidSkills');
+    });
+  });
+
+  // describe('_generateSkillChoices', () => {
+  //   it('should generate valid skill choices', () => {
+  //     const skills = [{ skill: 'Skill1' }, { skill: 'Skill2' }];
+  //     const expectedChoices = [
+  //       { ...mockGetSelectOptionFromSkillResult },
+  //       { ...mockGetSelectOptionFromSkillResult },
+  //     ];
+    
+  //     const choices = campActions._generateSkillChoices(skills, 'perform');
+    
+  //     expect(choices).toHaveLength(2);
+  //     expect(choices).toEqual(expect.arrayContaining(expectedChoices));
+  //   });
+    
+    
+
+  //   it('should handle empty skills gracefully', () => {
+  //     const choices = campActions._generateSkillChoices([], 'perform');
+  //     expect(choices).toHaveLength(0);
+  //   });
+  // });
+
+  // describe('_updateObject', () => {
+  //   it('should prepare results and call the socket', async () => {
+  //     // Mock the implementation of executeAsGM
+  //     dl3HexCrawlSocket.executeAsGM.mockResolvedValue(true);
+    
+  //     const mockFormData = {
+  //       'aid-skill-0': 'Aid1',
+  //     };
+    
+  //     const socketSpy = jest.spyOn(dl3HexCrawlSocket, 'executeAsGM');
+    
+  //     // Act
+  //     await campActions._updateObject(null, mockFormData);
+    
+  //     // Assert
+  //     expect(socketSpy).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.any(Object));
+  //   });
+    
+  // });
+
+  // describe('updateUI', () => {
+  //   it('should call all UI helper methods for each activity and update aidMessage', () => {
+  //     const updateSkillSpy = jest.spyOn(campActions, '_updateSkillOptions');
+  //     const updateHelpersSpy = jest.spyOn(campActions, '_updateGlobalHelpers');
+  //     const updateButtonsSpy = jest.spyOn(campActions, '_updateButtons');
+  //     const updateCheckmarksSpy = jest.spyOn(campActions, '_updateCheckmarks');
+  //     const toggleAidSpy = jest.spyOn(campActions, '_toggleAidSection');
+  
+  //     campActions.globalCompletedActions = {
+  //       1: { performers: { Hero: 1 } },
+  //     };
+  
+  //     const template =
+  //       `<form class="cs-dl3-camp-actions">
+  //         <div class="cs-dl3-activity">
+  //           <div class="cs-dl3-activity-options">
+  //             <div class="cs-dl3-aid-helpers-row"></div>
+  //           </div>
+  //         </div>
+  //       </form>`;
+  //     const html = getMockHtml(template, { ...mockContext });
+  
+  //     campActions.updateUI(html);
+  
+  //     // TODO This needs its own test
+  //     // Verify the aid helpers row is updated
+  //     // const aidHelpersRow = html.find('.cs-dl3-aid-helpers-row');
+  //     // expect(aidHelpersRow.html).toContain('Hero');
+  
+  //     // Verify other UI helper methods
+  //     expect(updateSkillSpy).toHaveBeenCalled();
+  //     expect(updateHelpersSpy).toHaveBeenCalled();
+  //     expect(updateButtonsSpy).toHaveBeenCalled();
+  //     expect(updateCheckmarksSpy).toHaveBeenCalled();
+  //     expect(toggleAidSpy).toHaveBeenCalled();
+  //   });
+  // });
+
+  // describe('close', () => {
+  //   it('should cleanup global state and call the superclass close method', async () => {
+  //     const cleanupSpy = jest.spyOn(campActions, 'cleanupGlobalState').mockResolvedValue();
+  //     const superCloseSpy = jest.spyOn(FormApplication.prototype, 'close').mockResolvedValue();
+
+  //     await campActions.close();
+
+  //     expect(cleanupSpy).toHaveBeenCalled();
+  //     expect(superCloseSpy).toHaveBeenCalled();
+
+  //     cleanupSpy.mockRestore();
+  //     superCloseSpy.mockRestore();
+  //   });
+  // });
+
+  // describe('updateGlobalState', () => {
+  //   describe('independent tracking', () => {
+  //     it('should update the global state using independent tracking', async () => {
+  //       // Setup an activity that uses independent tracking.
+  //       const activity = {
+  //         id: "gatherFirewood",
+  //         timeCost: 1,
+  //         repeatable: true,
+  //         useIndependentTracking: true,
+  //         // Other properties as needed...
+  //       };
+    
+  //       const assignedActor = {
+  //         id: "actor1",
+  //         name: "Hero"
+  //         // Additional actor properties...
+  //       };
+    
+  //       const campActionsInstance = new CampActions(
+  //         { id: "scene1" },
+  //         {
+  //           activities: [activity],
+  //           currentDay: 1,
+  //           assignedActor,
+  //           globalCompletedActions: {},
+  //         },
+  //         {}
+  //       );
+    
+  //       // Spy on the socket notification.
+  //       const executeForOthersSpy = jest.spyOn(dl3HexCrawlSocket, "executeForOthers").mockImplementation(() => {});
+  //       const updateUISpy = jest.spyOn(CampActions.prototype, "updateUI").mockImplementation(() => {});
+
+  //       // Call updateGlobalState with independent tracking enabled.
+  //       await campActionsInstance.updateGlobalState(activity.id, 1, false, true);
+    
+  //       // Check that the global state now contains a `performers` object with the count incremented.
+  //       const globalState = campActionsInstance.globalCompletedActions[activity.id];
+  //       expect(globalState).toBeDefined();
+  //       expect(globalState.performers).toBeDefined();
+  //       expect(globalState.performers[assignedActor.name]).toBe(1);
+    
+  //       // Call it again to simulate another action.
+  //       await campActionsInstance.updateGlobalState(activity.id, 1, false, true);
+  //       expect(campActionsInstance.globalCompletedActions[activity.id].performers[assignedActor.name]).toBe(2);
+    
+  //       // Verify that the socket notification is called.
+  //       expect(executeForOthersSpy).toHaveBeenCalled();
+    
+  //       executeForOthersSpy.mockRestore();
+  //     });
+  //   });
+  // });
+
+  // describe('Template integration - aidMessage visibility', () => {
+  //   it('should show or hide the aid helpers row based on aidMessage', () => {
+  //     // Mock activity data with an aidMessage
+  //     const activityWithMessage = {
+  //       id: 1,
+  //       aidMessage: '<strong>Performed by:</strong> Hero x2',
+  //     };
+
+  //     const activityWithoutMessage = {
+  //       id: 2,
+  //       aidMessage: '',
+  //     };
+
+  //     const template = `
+  //       <form class="cs-dl3-camp-actions">
+  //         {{#if aidMessage}}
+  //           <div class="cs-dl3-aid-helpers-row">{{{aidMessage}}}</div>
+  //         {{else}}
+  //           <div class="cs-dl3-aid-helpers-row" style="display:none;"></div>
+  //         {{/if}}
+  //       </form>
+  //     `;
+
+  //     // Render with aidMessage
+  //     const htmlWithMessage = getMockHtml(template, activityWithMessage);
+  //     const helpersRowWithMessage = htmlWithMessage.find('.cs-dl3-aid-helpers-row');
+  //     expect(helpersRowWithMessage.html()).toContain('Performed by:');
+  //     expect(helpersRowWithMessage.attr('style')).toBeUndefined();
+
+  //     // Render without aidMessage
+  //     const htmlWithoutMessage = getMockHtml(template, activityWithoutMessage);
+  //     const helpersRowWithoutMessage = htmlWithoutMessage.find('.cs-dl3-aid-helpers-row');
+  //     expect(helpersRowWithoutMessage.html()).toBe('');
+  //     expect(helpersRowWithoutMessage.attr('style')).toBe('display:none;');
+  //   });
+  // });
+
+  // describe('cleanupGlobalState', () => {
+  //   it('should clear globalCompletedActions', async () => {
+  //     // Correct globalCompletedActions mock
+  //     campActions.globalCompletedActions = {
+  //       gatherFirewood: {
+  //         performers: { Hero: 2, Ally: 1 },
+  //         helpers: ["Hero", "Ally"],
+  //       },
+  //       repairEquipment: {
+  //         performers: { Hero: 1 },
+  //         helpers: [],
+  //       },
+  //     };
+  
+  //     // Activities mock with aidMessage set
+  //     campActions.activities = [
+  //       { id: "gatherFirewood" },
+  //       { id: "repairEquipment" },
+  //     ];
+  
+  //     // Call cleanupGlobalState
+  //     await campActions.cleanupGlobalState();
+  
+  //     // Verify globalCompletedActions is cleared
+  //     expect(campActions.globalCompletedActions).toEqual({
+  //       gatherFirewood: {
+  //         performers: { Ally: 1, Hero: 0 },
+  //         helpers: ["Ally"],
+  //       },
+  //       repairEquipment: {
+  //         performers: { Hero: 0 },
+  //         helpers: [],
+  //       },
+  //     });
+  //   });
+  // });
+
+  // describe('_updateGlobalHelpers', () => {
+  //   it('should dynamically compute aidMessage for independent tracking and update the DOM', () => {
+  //     // Mock the DOM structure
+  //     const html = $(`
+  //       <div class="cs-dl3-activity-options">
+  //         <div class="cs-dl3-aid-helpers-row"></div>
+  //       </div>
+  //     `);
+  
+  //     // Mock globalCompletedActions for independent tracking
+  //     campActions.globalCompletedActions = {
+  //       gatherFirewood: {
+  //         performers: { Hero: 2, Ally: 1 },
+  //       },
+  //     };
+  
+  //     // Call _updateGlobalHelpers
+  //     const result = campActions._updateGlobalHelpers(
+  //       html,
+  //       {
+  //         performers: { Hero: 2, Ally: 1 },
+  //       },
+  //     );
+  
+  //     //const aidRow = result.find(".cs-dl3-aid-helpers-row");
+  //     expect(result.html()).toBe('<strong>Performed by:</strong> Hero x2, Ally');
+  //   });
+  
+  //   it('should dynamically compute aidMessage for standard tracking (helpers) and update the DOM', () => {
+  //     // Mock the DOM structure
+  //     const html = $(`
+  //       <div class="cs-dl3-activity-options">
+  //         <div class="cs-dl3-aid-helpers-row"></div>
+  //       </div>
+  //     `);
+  
+  //     // Mock globalCompletedActions for standard tracking
+  //     campActions.globalCompletedActions = {
+  //       cookDinner: {
+  //         helpers: ["Hero", "Ally"],
+  //       },
+  //     };
+  
+  //     // Call _updateGlobalHelpers
+  //     const aidRow = campActions._updateGlobalHelpers(html, {
+  //       helpers: ["Hero", "Ally"],
+  //     });
+  
+  //     expect(aidRow.html()).toBe('<strong>Aided by:</strong> Hero, Ally');
+  //   });
+  
+  //   it('should remove aidRow if no aidMessage is present', () => {
+  //     // Mock the DOM structure
+  //     const html = $(`
+  //       <div class="cs-dl3-activity-options">
+  //         <div class="cs-dl3-aid-helpers-row"></div>
+  //       </div>
+  //     `);
+  
+  //     // Empty globalCompletedActions for the activity
+  //     campActions.globalCompletedActions = {};
+  
+  //     // Call _updateGlobalHelpers
+  //     const aidRow = campActions._updateGlobalHelpers(html, {});
+  
+  //     expect(aidRow).toBeNull();
+  //   });
+  
+  //   it('should append aidRow dynamically if it does not exist and compute aidMessage', () => {
+  //     // Mock the DOM structure without the aidRow
+  //     const html = $(`
+  //       <div class="cs-dl3-activity-options">
+  //         <!-- No .cs-dl3-aid-helpers-row initially -->
+  //       </div>
+  //     `);
+  
+  //     // Mock globalCompletedActions for independent tracking
+  
+  //     // Call _updateGlobalHelpers
+  //     const aidRow = campActions._updateGlobalHelpers(html, {
+  //       performers: { Hero: 1 },
+  //     });
+
+  //     expect(aidRow.html()).toBe('<strong>Performed by:</strong> Hero');
+  //   });
+  // });
+
+  // describe('_handleUnselectAction', () => {
+  //   let mockEvent, mockHtml;
+  
+  //   describe('with independent tracking (useIndependentTracking: true)', () => {
+  //     beforeEach(() => {
+  //       // Create a basic event and DOM stub
+  //       mockEvent = {
+  //         stopPropagation: jest.fn(),
+  //         currentTarget: $("<div data-action-index='0'></div>"),
+  //       };
+  //       mockHtml = $("<div></div>");
+        
+  //       // Initialize an activity with independent tracking set to true.
+  //       campActions.activities = [
+  //         {
+  //           id: "gatherFirewood",
+  //           title: "Gather Firewood",
+  //           timeCost: 1,
+  //           repeatable: true,
+  //           useIndependentTracking: true,
+  //         },
+  //       ];
+  //       // Set the initial global state and completedActions for testing.
+  //       campActions.globalCompletedActions = {
+  //         gatherFirewood: { performers: { Hero: 2, Ally: 1 }, helpers: [] },
+  //       };
+  //       campActions.completedActions = [2];
+  //       campActions.lockedActivities = {};
+  //     });
+    
+  //     it('should decrement performer count and update global state for repeatable activity', async () => {
+  //       await campActions._handleUnselectAction(mockEvent, mockHtml);
+    
+  //       expect(campActions.globalCompletedActions.gatherFirewood.performers.Hero).toBe(1);
+  //       expect(campActions.globalCompletedActions.gatherFirewood.performers.Ally).toBe(1);
+  //     });
+    
+  //     it('should remove performer entry if count reaches zero', async () => {
+  //       // Adjust initial state for Hero to have performed the activity only once.
+  //       campActions.globalCompletedActions.gatherFirewood.performers.Hero = 1;
+    
+  //       await campActions._handleUnselectAction(mockEvent, mockHtml);
+    
+  //       // Verify that Hero is removed from performers.
+  //       expect(campActions.globalCompletedActions.gatherFirewood.performers.Hero).toBeUndefined();
+  //       expect(campActions.globalCompletedActions.gatherFirewood.performers.Ally).toBe(1);
+  //       // Activity stays in global state as Ally still exists.
+  //       expect(campActions.globalCompletedActions.gatherFirewood).toBeDefined();
+  //     });
+    
+  //     it('should remove the activity entirely if no performers remain', async () => {
+  //       // Adjust initial state so that only Hero is recorded.
+  //       campActions.globalCompletedActions.gatherFirewood.performers = { Hero: 1 };
+    
+  //       await campActions._handleUnselectAction(mockEvent, mockHtml);
+    
+  //       expect(campActions.globalCompletedActions.gatherFirewood).toBeUndefined();
+  //     });
+    
+  //     it('should not modify global state for locked activities', async () => {
+  //       // Lock the activity.
+  //       campActions.lockedActivities = { 0: true };
+    
+  //       await campActions._handleUnselectAction(mockEvent, mockHtml);
+    
+  //       expect(campActions.globalCompletedActions.gatherFirewood.performers.Hero).toBe(2);
+  //       expect(campActions.globalCompletedActions.gatherFirewood.performers.Ally).toBe(1);
+  //     });
+  //   });
+    
+  //   describe('with non–independent tracking (useIndependentTracking: false)', () => {
+  //     beforeEach(() => {
+  //       // Create a basic event and DOM stub.
+  //       mockEvent = {
+  //         stopPropagation: jest.fn(),
+  //         currentTarget: $("<div data-action-index='0'></div>"),
+  //       };
+  //       mockHtml = $("<div></div>");
+        
+  //       // Initialize an activity with independent tracking set to false.
+  //       campActions.activities = [
+  //         {
+  //           id: "gatherFirewood",
+  //           title: "Gather Firewood",
+  //           timeCost: 1,
+  //           repeatable: true,
+  //           useIndependentTracking: false,
+  //         },
+  //       ];
+  //       // Set the globalCompletedActions and completedActions.
+  //       campActions.globalCompletedActions = {
+  //         gatherFirewood: { performers: { Hero: 1 }, helpers: [] },
+  //       };
+  //       campActions.completedActions = [1];
+  //       campActions.lockedActivities = {};
+  //     });
+    
+  //     it('should remove the activity entirely if no performers remain', async () => {
+  //       await campActions._handleUnselectAction(mockEvent, mockHtml);
+  //       expect(campActions.globalCompletedActions.gatherFirewood).toBeUndefined();
+  //     });
+  //   });
+  // });
+  
+  // describe('_updateTrackingActivity', () => {
+  //   it('should initialize a new state if undefined', () => {
+  //     const result = campActions._updateTrackingActivity(undefined, "Hero", false);
+  //     expect(result).toEqual({ performers: { Hero: 1 }, helpers: [] });
+  //   });
+    
+  //   it('should increment an existing performer when not an aid action', () => {
+  //     const initial = { performers: { Hero: 1 }, helpers: [] };
+  //     const result = campActions._updateTrackingActivity(initial, "Hero", false);
+  //     expect(result.performers.Hero).toBe(2);
+  //   });
+    
+  //   it('should add a performer if not already present', () => {
+  //     const initial = { performers: { Ally: 1 }, helpers: [] };
+  //     const result = campActions._updateTrackingActivity(initial, "Hero", false);
+  //     expect(result.performers.Hero).toBe(1);
+  //     expect(result.performers.Ally).toBe(1);
+  //   });
+    
+  //   it('should update helpers when isAid is true and avoid duplicates', () => {
+  //     const initial = { performers: {}, helpers: [] };
+  //     const result = campActions._updateTrackingActivity(initial, "Hero", true);
+  //     expect(result.helpers).toContain("Hero");
+      
+  //     // Calling again with the same performer should not duplicate the entry.
+  //     const result2 = campActions._updateTrackingActivity(result, "Hero", true);
+  //     const heroCount = result2.helpers.filter(name => name === "Hero").length;
+  //     expect(heroCount).toBe(1);
+  //   });
+  // });
+  
+  // // --- Integrated Tests ---//
+  // describe('_updateButtons', () => {
+  //   describe('Button and div updates with updated logic', () => {
+  //     let html, activity;
+  
+  //     beforeEach(() => {
+  //       // Set up a minimal DOM structure
+  //       html = $(`
+  //         <div class="cs-dl3-activity">
+  //           <div class="cs-dl3-activity-options">
+  //             <div class="cs-dl3-perform-container">
+  //               <button type="button" class="cs-dl3-activity-action">Incorrect Button</button>
+  //               <select class="cs-dl3-skill-select"></select>
+  //             </div>
+  //             <hr class="cs-dl3-divider">
+  //             <div class="cs-dl3-aid-another-container">
+  //               <button type="button" class="cs-dl3-aid-another-action">
+  //                 Aid Another
+  //               </button>
+  //             </div>
+  //             <div class="cs-dl3-aid-helpers-row" style="display: block;">Incorrect Content</div>
+  //           </div>
+  //         </div>
+  //       `);
+  
+  //       document.body.appendChild(html[0]); // Attach element to the live DOM
+  //     });
+  
+  //     afterEach(() => {
+  //       document.body.innerHTML = ""; // Clear the DOM between tests
+  //     });
+  
+  //     it('should show div with "Aided by" and leave button at default for useIndependentTracking and repeatable', () => {
+  //       activity = { id: 'testActivity', repeatable: true, useIndependentTracking: true };
+  //       campActions.globalCompletedActions = {
+  //         [activity.id]: { helpers: ["Hero", "Ally"] } // Helpers exist
+  //       };
+      
+  //       // Call the function
+  //       campActions._updateButtons(html, activity, campActions.globalCompletedActions[activity.id], 0);
+      
+  //       // Expectations
+  //       const buttonText = html.find(".cs-dl3-activity-action").text();
+  //       const infoDiv = html.find(".cs-dl3-aid-helpers-row");
+      
+  //       expect(buttonText).toBe("Perform Action"); // Default perform button text
+  //       expect(infoDiv.html()).toBe("<strong>Aided by:</strong> Hero, Ally"); // Div updates with helpers
+  //       expect(infoDiv.css("display")).not.toBe("none"); // Div is visible
+  //     });
+  
+  //     it('should show div with "Performed by" and leave button at default for useIndependentTracking and not repeatable', () => {
+  //       activity = { id: 'testActivity', repeatable: false, useIndependentTracking: true };
+  //       campActions.globalCompletedActions = {
+  //         [activity.id]: { performers: { "Hero": 1 } } // Performers exist
+  //       };
+      
+  //       // Call the function
+  //       campActions._updateButtons(html, activity, campActions.globalCompletedActions[activity.id], 0);
+      
+  //       // Expectations
+  //       const buttonText = html.find(".cs-dl3-activity-action").text();
+  //       const infoDiv = html.find(".cs-dl3-aid-helpers-row");
+      
+  //       expect(buttonText).toBe("Perform Action"); // Default perform button text
+  //       expect(infoDiv.html()).toBe("Performed by: Hero"); // Div updates with performers
+  //       expect(infoDiv.css("display")).not.toBe("none"); // Div is visible
+  //     });
+      
+  
+  //     it('should show div with both "Aided by" and "Performed by", leave button at default for repeatable without useIndependentTracking', () => {
+  //       activity = { id: 'testActivity', repeatable: true, useIndependentTracking: false };
+  //       campActions.globalCompletedActions = {
+  //         [activity.id]: {
+  //           helpers: ["Hero", "Ally"], // Helpers exist
+  //           performers: { "Bob": 2 }  // Performers exist
+  //         }
+  //       };
+      
+  //       // Call the function
+  //       campActions._updateButtons(html, activity, campActions.globalCompletedActions[activity.id], 0);
+      
+  //       // Expectations
+  //       const buttonText = html.find(".cs-dl3-activity-action").text();
+  //       const infoDiv = html.find(".cs-dl3-aid-helpers-row");
+  //       const infoDivText = infoDiv.text();
+      
+  //       expect(buttonText).toBe("Perform Action"); // Default perform button text
+  //       expect(infoDivText).toContain("Aided by:");
+  //       expect(infoDivText).toContain("Hero, Ally");
+  //       expect(infoDivText).toContain("Performed by:");
+  //       expect(infoDivText).toContain("Bob x2");
+  //       expect(infoDiv.css("display")).toBe("none"); // Div is hidden as per updated logic
+  //     });
+
+  //     it('should update button text and hide div for neither repeatable nor useIndependentTracking', () => {
+  //       activity = { id: 'testActivity', repeatable: false, useIndependentTracking: false };
+  //       campActions.globalCompletedActions = {
+  //         [activity.id]: { performers: { "Hero": 1 } } // Performers exist
+  //       };
+      
+  //       // Call the function
+  //       campActions._updateButtons(html, activity, campActions.globalCompletedActions[activity.id], 0);
+      
+  //       // Expectations
+  //       const buttonText = html.find(".cs-dl3-activity-action").text();
+  //       const infoDiv = html.find(".cs-dl3-aid-helpers-row");
+      
+  //       expect(buttonText).toBe("Performed by: Hero"); // Button text updates with performer info
+  //       expect(infoDiv.css("display")).toBe("none"); // Div should be hidden
+  //     });
+
+  //     it('should disable "Aid Another" if no one has performed yet', () => {
+  //       // Initial setup: No performers yet
+  //       activity = { id: 'testActivity', repeatable: true, useIndependentTracking: false };
+  //       campActions.globalCompletedActions = {
+  //         [activity.id]: { performers: {}, helpers: [] } // No performers
+  //       };
+      
+  //       // Call the function
+  //       campActions._updateButtons(html, activity, campActions.globalCompletedActions[activity.id], 0);
+      
+  //       // Expectations
+  //       const aidButton = html.find(".cs-dl3-aid-another-action");
+  //       const isAidDisabled = aidButton.prop("disabled");
+      
+  //       expect(isAidDisabled).toBe(true); // "Aid Another" should be disabled
+  //     });
+      
+  //     it('should enable "Aid Another" if at least one performer exists', () => {
+  //       // Initial setup: One performer exists
+  //       activity = { id: 'testActivity', repeatable: true, useIndependentTracking: false };
+  //       campActions.globalCompletedActions = {
+  //         [activity.id]: { performers: { "Hero": 1 }, helpers: [] } // One performer
+  //       };
+      
+  //       // Call the function
+  //       campActions._updateButtons(html, activity, campActions.globalCompletedActions[activity.id], 0);
+      
+  //       // Expectations
+  //       const aidButton = html.find(".cs-dl3-aid-another-action");
+  //       const isAidDisabled = aidButton.prop("disabled");
+      
+  //       expect(isAidDisabled).toBe(false); // "Aid Another" should be enabled
+  //     });
+
+  //     it('should disable all actions and hide the div if globalState is empty', () => {
+  //       activity = { id: 'testActivity', repeatable: false, useIndependentTracking: false };
+  //       campActions.globalCompletedActions = {}; // Empty global state
+      
+  //       // Call the function
+  //       campActions._updateButtons(html, activity, campActions.globalCompletedActions[activity.id], 0);
+      
+  //       // Expectations
+  //       const performButton = html.find(".cs-dl3-activity-action");
+  //       const aidButton = html.find(".cs-dl3-aid-another-action");
+  //       const infoDiv = html.find(".cs-dl3-aid-helpers-row");
+      
+  //       expect(performButton.prop("disabled")).toBe(false); // Perform button should not be disabled by default
+  //       expect(aidButton.prop("disabled")).toBe(true); // Aid button should be disabled due to no performers
+  //       expect(infoDiv.css("display")).toBe("none"); // Info div should remain hidden
+  //     });
+      
+  //     it('should properly handle empty performers and helpers in globalState', () => {
+  //       activity = { id: 'testActivity', repeatable: true, useIndependentTracking: false };
+  //       campActions.globalCompletedActions = {
+  //         [activity.id]: { performers: {}, helpers: [] } // Empty performers and helpers
+  //       };
+      
+  //       // Call the function
+  //       campActions._updateButtons(html, activity, campActions.globalCompletedActions[activity.id], 0);
+      
+  //       // Expectations
+  //       const aidButton = html.find(".cs-dl3-aid-another-action");
+  //       const infoDiv = html.find(".cs-dl3-aid-helpers-row");
+      
+  //       expect(aidButton.prop("disabled")).toBe(true); // Aid button should be disabled
+  //     });
+      
+  //     it('should enable aid button when performers exist in globalState', () => {
+  //       activity = { id: 'testActivity', repeatable: true, useIndependentTracking: false };
+  //       campActions.globalCompletedActions = {
+  //         [activity.id]: { performers: { "Hero": 1 }, helpers: [] }
+  //       };
+      
+  //       // Call the function
+  //       campActions._updateButtons(html, activity, campActions.globalCompletedActions[activity.id], 0);
+      
+  //       // Expectations
+  //       const aidButton = html.find(".cs-dl3-aid-another-action");
+  //       const infoDiv = html.find(".cs-dl3-aid-helpers-row");
+      
+  //       expect(aidButton.prop("disabled")).toBe(false); // Aid button should be enabled
+  //     });
+      
+  //   });
+  // });
+  
+  // describe('updateUI integration for perform button text', () => {
+  //   let html;
+  //   beforeEach(() => {
+  //     document.body.innerHTML = "";
+      
+  //     html = $(`
+  //       <form class="cs-dl3-camp-actions">
+  //         <div class="cs-dl3-activity">
+  //           <div class="cs-dl3-activity-options">
+  //             <div class="cs-dl3-perform-container">
+  //               <button type="button" class="cs-dl3-activity-action">Perform Action</button>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       </form>
+  //     `);
+  //     document.body.appendChild(html[0]);
+      
+  //     campActions = new CampActions(mockScene, mockData, mockOptions);
+  //     campActions.activities = [{
+  //       id: 'testActivity',
+  //       timeCost: 2,
+  //       repeatable: false,
+  //       useIndependentTracking: false,
+  //     }];
+  //   });
+
+  //   afterEach(() => {
+  //     document.body.innerHTML = "";
+  //   });
+
+  //   it('should display "Perform Action" when no global performers exist', () => {
+  //     document.body.removeChild(html[0]);
+  //     html = $(`
+  //       <form class="cs-dl3-camp-actions">
+  //         <div class="cs-dl3-activity">
+  //           <div class="cs-dl3-activity-options">
+  //             <div class="cs-dl3-perform-container">
+  //               <button type="button" class="cs-dl3-activity-action">Other Text</button>
+  //             </div>
+  //           </div>
+  //         </div>
+  //       </form>
+  //     `);
+  //     campActions.globalCompletedActions = { 
+  //       testActivity: { performers: {}, helpers: [] } 
+  //     };
+  //     document.body.appendChild(html[0]);
+  //     campActions.updateUI(html);
+  //     const updatedText = html.find(".cs-dl3-activity-action").text();
+  //     expect(updatedText).toBe("Perform Action");
+  //   });
+
+  //   it('should display the correct performer text when global performers exist', () => {
+  //     campActions.globalCompletedActions = { 
+  //       testActivity: { performers: { "Hero": 2, "Ally": 1 }, helpers: [] } 
+  //     };
+  //     campActions.updateUI(html);
+  //     const performButton = html.find(".cs-dl3-activity-action");
+  //     expect(performButton.text()).toBe("Performed by: Hero x2, Ally");
+  //   });
+  // });
+  
+  // describe('_activateLockedState', () => {
+  //   let mockHtml;
+  
+  //   beforeEach(() => {
+  //     mockHtml = $(`
+  //       <form class="cs-dl3-camp-actions">
+  //         <div class="cs-dl3-activity">
+  //           <div class="cs-dl3-completed-checkbox">
+  //             <input type="checkbox" class="cs-dl3-checkmark" data-action-index="0">
+  //           </div>
+  //         </div>
+  //       </form>
+  //     `);
+  //     document.body.appendChild(mockHtml[0]);
+  //     campActions = new CampActions(mockScene, mockData, mockOptions);
+  //   });
+  //   afterEach(() => {
+  //     document.body.innerHTML = "";
+  //     campActions.lockedActivities = {};
+  //   });
+  
+  //   it('should add the locked class when an activity is locked', () => {
+  //     // Mock a locked activity
+  //     campActions.lockedActivities[0] = true;
+  
+  //     // Call the function
+  //     campActions._activateLockedState(mockHtml);
+  
+  //     // Check if the locked class is added
+  //     const checkboxContainer = mockHtml.find('.cs-dl3-completed-checkbox');
+  //     expect(checkboxContainer.hasClass('cs-dl3-checkbox-locked')).toBe(true);
+  //   });
+  
+  //   it('should remove the locked class when an activity is unlocked', () => {
+  //     // Mock an unlocked activity
+  //     campActions.lockedActivities[0] = false;
+  
+  //     // Ensure the locked class is present initially
+  //     const checkboxContainer = mockHtml.find('.cs-dl3-completed-checkbox');
+  //     checkboxContainer.addClass('cs-dl3-checkbox-locked');
+  
+  //     // Call the function
+  //     campActions._activateLockedState(mockHtml);
+  
+  //     // Check if the locked class is removed
+  //     expect(checkboxContainer.hasClass('cs-dl3-checkbox-locked')).toBe(false);
+  //   });
+  
+  //   it('should gracefully handle missing elements', () => {
+  //     // Call the function with no corresponding checkbox
+  //     const result = campActions._activateLockedState($('<div></div>'));
+  
+  //     // Expect no errors
+  //     expect(result).toBeUndefined();
+  //   });
+  // });
+  
+});

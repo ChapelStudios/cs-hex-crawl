@@ -1,0 +1,13 @@
+<form>
+  <div>Locations selected:<br></br>{{tileLocations}}</div>
+  Zone ID
+  {{numberInput zoneId name="zoneId" step=1 min=0 max=10}}
+
+  {{#each tileTypes}}
+    <div>
+      <label>{{this}}</label>
+      <input type="checkbox" name="{{this}}" {{checked (contains ../selectedLocales this )}}>
+    </div>
+  {{/each}}
+
+</form>

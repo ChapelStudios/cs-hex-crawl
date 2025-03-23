@@ -1,0 +1,54 @@
+<form class="camp-actions-gm-screen">
+  <div class="header">
+    <p class="current-day">Current Day: {{currentDay}}</p>
+  </div>
+
+  {{!-- Dynamically include a partial based on the activity's id --}}
+  {{!-- {{#each activities}}
+    {{!-- {{> (lookup . "id") this }}
+  {{!-- {{/each}}
+
+  {{#each activities as |activityId|}}
+    <section>
+      <h2>Activity ID: {{activityId}}</h2>
+
+      {{#each this.[activityId].performers as |performerRows performer|}}
+        <div class="performer-section">
+          <h3>Performer: {{performer}}</h3>
+          
+          {{#each performerRows as |performerRow|}}
+            <p>
+              {{#if performerRow.category}}
+                <strong>Category:</strong> {{performerRow.category}}
+              {{/if}}
+              <br>
+              <strong>Skill Code:</strong> {{performerRow.skillCode}}
+              <br>
+              <strong>Count:</strong> {{performerRow.count}}
+            </p>
+          {{/each}}
+
+          {{#if this.[activityId].aides.[performer]}}
+            <div class="aides-section">
+              <h4>Aides for {{performer}}</h4>
+              {{#each this.[activityId].aides.[performer] as |aidRow|}}
+                <p>
+                  {{#if aidRow.category}}
+                    <strong>Category:</strong> {{aidRow.category}}
+                  {{/if}}
+                  <br>
+                  <strong>Skill Code:</strong> {{aidRow.skillCode}}
+                  <br>
+                  <strong>Count:</strong> {{aidRow.count}}
+                </p>
+              {{/each}}
+            </div>
+          {{else}}
+            <p>No aides assigned to this performer.</p>
+          {{/if}}
+        </div>
+      {{/each}}
+    </section>
+  {{/each}}
+
+</form>

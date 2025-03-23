@@ -13,10 +13,10 @@
         "verified": "11"
     },
     "esmodules": [
-      "hexCrawl.js"
+      "src/hexCrawl.js"
     ],
     "styles": [
-      "core.css"
+      "src/core.css"
     ],
     "packs": [],
     "relationships": {

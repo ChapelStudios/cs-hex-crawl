@@ -1,0 +1,289 @@
+form.cs-dl3-camp-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 10px;
+  font-family: Arial, sans-serif;
+  margin: 20px;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+.cs-dl3-camp-actions p {
+  grid-column: span 3; /* Header spans all three columns */
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: #555;
+}
+
+.cs-dl3-activity {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cs-dl3-activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.cs-dl3-activity-title {
+  font-weight: bold;
+  color: #333;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+.cs-dl3-activity-title.disabled {
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.cs-dl3-activity-repeatable {
+  font-size: 2em; /* Increase size to make it more prominent */
+  font-style: normal; /* Remove italic for clarity */
+  font-weight: bold; /* Make it bold for emphasis */
+  margin-left: 0.5em; /* Add some spacing from the text */
+}
+
+.cs-dl3-activity-options {
+  margin-top: 10px;
+}
+
+.cs-dl3-activity-action,
+.cs-dl3-aid-another-action {
+  margin-top: 10px;
+  padding: 6px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+.cs-dl3-activity-action:hover,
+.cs-dl3-aid-another-action:hover {
+  background-color: #0056b3;
+}
+
+.cs-dl3-activity-action.disabled,
+.cs-dl3-aid-another-action.disabled {
+  background-color: #ccc;
+  color: #777;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.cs-dl3-aid-another-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.cs-dl3-aid-skill-select {
+  padding: 4px;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.cs-dl3-completed-checkbox {
+  width: 1em; /* Set width based on font size */
+  height: 1em; /* Set height to match width */
+  cursor: pointer;
+  margin-right: 5px; /* Add spacing from adjacent elements */
+  transform: scale(1); /* Ensure proper scaling */
+}
+
+.cs-dl3-activity-details {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #555;
+}
+
+.cs-dl3-activity-details.cs-dl3-hidden {
+  display: none;
+}
+
+.cs-dl3-form-footer {
+  grid-column: span 3; /* Ensure it spans across all columns */
+  display: flex;
+  justify-content: flex-end; /* Align to the bottom-right */
+  margin-top: 20px;
+}
+
+.cs-dl3-submit-button {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.cs-dl3-submit-button:hover {
+  background-color: #218838;
+}
+
+.cs-dl3-submit-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.cs-dl3-checkmark img {
+  width: 2em; 
+  height: 2em; 
+  vertical-align: middle; 
+  margin-right: 0.75em;
+  cursor: pointer;
+}
+
+.cs-dl3-checkmark {
+  margin-right: 0.75em;
+}
+
+.cs-dl3-skill-select {
+  padding: 4px;
+  font-size: 0.9rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin-right: 10px;
+  cursor: pointer;
+}
+
+/* Container for perform action elements */
+.cs-dl3-perform-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Divider between perform and aid sections */
+.cs-dl3-divider {
+  border: none;
+  border-top: 1px solid #ccc;
+  margin: 10px 0;
+}
+
+/* Style for the details toggle button */
+.cs-dl3-details-toggle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  /* Optionally, push it to the right if desired */
+  margin-left: auto;
+}
+
+/* Style for disabled select elements */
+.cs-dl3-skill-select:disabled,
+.cs-dl3-aid-skill-select:disabled {
+  background-color: #eee;
+  border-color: #ccc;
+  color: #777;
+  cursor: not-allowed;
+}
+
+/* Style for disabled buttons */
+.cs-dl3-activity-action:disabled,
+.cs-dl3-aid-another-action:disabled {
+  background-color: #ccc;
+  color: #777;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Optionally, style disabled options if needed */
+option:disabled {
+  color: #999;
+  background: #f5f5f5;
+}
+
+/* Style for the clickable details toggle icon */
+.cs-dl3-details-toggle.clickable-icon {
+  cursor: pointer;
+  /* Optional: add some padding or margin if needed */
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+/* Container for the left side of the header (title + checkmarks) */
+.cs-dl3-header-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+}
+
+.cs-dl3-performer-names {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.9rem;
+  color: #333;
+  width: 100%;
+}
+
+.cs-dl3-clear-button {
+  margin-right: 10px; /* Space between the Clear and Submit buttons */
+  padding: 10px 20px;
+  background-color: #ffc107;
+  color: #212529;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.cs-dl3-clear-button:hover {
+  background-color: #e0a800;
+}
+.cs-dl3-clear-global-button {
+  margin-right: 10px; /* Space between Clear All and Clear */
+  padding: 10px 20px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.cs-dl3-clear-global-button:hover {
+  background-color: #b02a37;
+}
+
+.cs-dl3-checkmark.cs-dl3-disabled-checkmark {
+  position: relative;
+  cursor: not-allowed;
+}
+
+/* Disable interaction */
+/* This also disables the title and it's info leave to code block for now */
+.cs-dl3-disabled-checkmark img {
+  pointer-events: none; 
+}
+
+.cs-dl3-disabled-checkmark::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(128, 128, 128, 0.5); /* Semi-transparent gray */
+  z-index: 1; /* Ensure it overlays the checkbox */
+  border-radius: 4px; /* Match checkbox style if rounded */
+}
