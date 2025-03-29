@@ -175,19 +175,14 @@ export function updateCheckmarks(element, activityActions, activity, actorName) 
   const checkmarkContainer = $(element).find(".cs-dl3-checkmark-container");
   checkmarkContainer.empty();
   let {
-    performedByOthers: lockedPerfSkills,
-    performedByMe: unlockedPerfSkills,
-    aidedByOthers: lockedAidSkills,
-    aidedByMe: unlockedAidSkills,
+    performedByMe,
+    aidedByMe,
+    myLockedPerforms,
+    myLockedAids,
+    performedByOthers,
+    aidedByOthers,
   } = getSkillCountsByActivity(activityActions, actorName);
 
-  // what was the point of this again? it's causing issues and I don't get why we show no checks if this condition
-  // if (activity.useIndependentTracking && !activity.repeatable) {
-  //   unlockedPerfSkills = 0;
-  //   unlockedAidSkills = 0;
-  // }
-
-  // const completedCount = completedActions[index] || 0;
   const appendCheckmarks = (actions, { isAid = false, unlocked = false } = {}) => {
     for (const { activityId, skillCode, category } of actions) {
       const extraCheckMarkText = activity.getCheckmarkData?.({ category }) || '';
@@ -214,10 +209,12 @@ export function updateCheckmarks(element, activityActions, activity, actorName) 
   };
   
   // Append locked and unlocked performers and helpers
-  appendCheckmarks(lockedPerfSkills, { unlocked: false });
-  appendCheckmarks(lockedAidSkills, { isAid: true, unlocked: false });
-  appendCheckmarks(unlockedPerfSkills, { unlocked: true });
-  appendCheckmarks(unlockedAidSkills, { isAid: true, unlocked: true });
+  appendCheckmarks(performedByOthers, { unlocked: false });
+  appendCheckmarks(aidedByOthers, { isAid: true, unlocked: false });
+  appendCheckmarks(myLockedPerforms, { unlocked: false });
+  appendCheckmarks(myLockedAids, { isAid: true, unlocked: false });
+  appendCheckmarks(performedByMe, { unlocked: true });
+  appendCheckmarks(aidedByMe, { isAid: true, unlocked: true });
 }
 
 export const updateRemainingHours = (html, remainingHours) => {

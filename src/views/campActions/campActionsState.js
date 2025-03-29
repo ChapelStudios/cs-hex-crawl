@@ -152,7 +152,7 @@ export class CampActionsState {
       locked = false,
       suppressUpdate = false,
       performer = this.owner,
-      extraData: { category, ...extraData} = {}
+      extraData: { category = null, ...extraData} = {}
     } = {} // options
   ) {    
     const changeValue = isDecrement ? -1 : 1;
@@ -295,30 +295,45 @@ export const verifyActivityHasBeenAidedByActor = (activityActions, performer, { 
 }
 
 export const getSkillCountsByActivity = (activityActions, performer, { category = null } = {}) => {
-  const filterActivities = ({ isAid, samePerformer }) =>
-    activityActions.filter(a => a.count > 0
-      // && a.category === category
-      && a.isAid === isAid
-      && (samePerformer ? a.performer === performer : a.performer !== performer)
-    );
+  const performedByMe = [],
+    aidedByMe = [],
+    myLockedPerforms = [],
+    myLockedAids = [],
+    performedByOthers = [],
+    aidedByOthers = [];
+
+  activityActions.forEach(action => {
+    if (action.performer === performer) {
+      if (action.isLocked) {
+        myLockedPerforms.push(action);
+        if (action.isAid) {
+          myLockedAids.push(action);
+        }
+        else {
+          myLockedPerforms.push(action);
+        }
+      }
+      else {
+        if (action.isAid) {
+          aidedByMe.push(action);
+        }
+        else {
+          performedByMe.push(action);
+        }
+      }
+    }
+    else {
+      if (action.isAid) {
+        aidedByOthers.push(action);
+      }
+      else {
+        performedByOthers.push(action);
+      }
+    }
+  })
 
   return {
-    performedByMe: filterActivities({
-      isAid: false,
-      samePerformer: true,
-    }),
-    aidedByMe: filterActivities({
-      isAid: true,
-      samePerformer: true,
-    }),
-    performedByOthers: filterActivities({
-      isAid: false,
-      samePerformer: false,
-    }),
-    aidedByOthers: filterActivities({
-      isAid: true,
-      samePerformer: false,
-    }),
+    performedByMe, aidedByMe, myLockedPerforms, myLockedAids, performedByOthers, aidedByOthers,
   };
 }
 

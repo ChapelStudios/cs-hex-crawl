@@ -1,3 +1,4 @@
+import { farSightSocketConfig } from "./constants/campActions/farSight.js";
 import { skillCheckSocketConfig } from "./helpers/entityTools.js";
 import { eventsSocketConfig } from "./repos/events.js";
 import { foragingSocketConfig } from "./repos/foraging.js";
@@ -34,6 +35,7 @@ export const dl3HexCrawlSocketInit = () => {
     eventsSocketConfig(dl3HexCrawlSocket);
     provisionsSocketConfig(dl3HexCrawlSocket);
     skillCheckSocketConfig(dl3HexCrawlSocket);
+    farSightSocketConfig(dl3HexCrawlSocket);
   });
 }
 

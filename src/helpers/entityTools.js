@@ -19,6 +19,9 @@ export const disambiguateSkillCode = (skillCode) => {
 export const requestSkillCheckActionName = "requestSkillCheck";
 export const requestSkillCheck = async (actor, skillname) => {
   const disambiguatedSkillCode = disambiguateSkillCode(skillname);
+  if (!actor.rollAbilityTest || !actor.rollSkill) {
+    actor = game.actors.get(actor._id);
+  }
   return disambiguatedSkillCode === false
     ? await actor.rollAbilityTest(skillname)
     : await actor.rollSkill(disambiguatedSkillCode);
