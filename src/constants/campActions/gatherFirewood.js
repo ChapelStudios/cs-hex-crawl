@@ -2,7 +2,7 @@ import { factionCode, mapCategoryToFaction } from "./common/factions.js";
 
 const cookOption = {
   id: "cook",
-  name: "Coook Fires",
+  name: "Cook Fires",
 };
 
 const mapCategoryToFactionOrCooking = (factionId) => {

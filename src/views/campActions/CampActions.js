@@ -27,7 +27,7 @@ export class CampActions extends FormApplication {
     this.aids = {};
     
     // Instead of keeping global state directly, encapsulate it in a dedicated manager.
-    this.stateManager = new CampActionsState(scene, data.assignedActor, this.updateUI.bind(this));
+    this.stateManager = new CampActionsState(scene, data.assignedActor, this.updateUI.bind(this), data.currentDay);
 
     loadStylesheet(localPath("campActions.css"));
   }
