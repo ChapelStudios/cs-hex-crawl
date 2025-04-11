@@ -1,11 +1,14 @@
 import { moduleCodePath } from "../../constants/paths.js";
-import { getFactionData, setFactionData } from "../../factions/factions.js";
+import { repLevels } from "../../factions/factionInfo.js";
+import { getFactionData, setFactionData, updateFactionRep } from "../../factions/factions.js";
+import { loadStylesheet } from "../../helpers/display.js";
 
 const localPath = (file) => `${moduleCodePath}views/factionManager/${file}`;
 
 class FactionManager extends FormApplication {
   constructor(scene, options = {}) {
     super(scene, options);
+    loadStylesheet(localPath("factionManager.css"));
   }
 
   static get defaultOptions() {
@@ -48,7 +51,8 @@ class FactionManager extends FormApplication {
   
     return {
       factions: factionData,
-      totals
+      totals,
+      repLevels,
     };
   }
 
@@ -65,12 +69,18 @@ class FactionManager extends FormApplication {
 
   activateListeners(html) {
     super.activateListeners(html);
+    
+    // Handle dropdown changes for reputation
+    html.find(".rep-dropdown").on("change", async (event) => {
+      const selectElement = event.currentTarget;
+      const factionId = selectElement.dataset.factionId;
+      const newRep = selectElement.value;
 
-    // Dynamically add CSS file
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = localPath("factionManager.css");
-    document.head.appendChild(link);
+      await updateFactionRep(this.object, factionId, newRep);
+
+      // Optionally, re-render the form to reflect the changes
+      this.render(true);
+    });
   }
 }
 

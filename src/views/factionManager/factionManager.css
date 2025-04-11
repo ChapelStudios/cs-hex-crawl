@@ -13,6 +13,19 @@
   margin: 0 0 5px;
 }
 
+.faction-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rep-dropdown {
+  margin-left: auto;
+  padding: 4px;
+  border: 1px solid #aaa;
+  border-radius: 2px;
+}
+
 .faction-details {
   display: flex;
   flex-direction: column;

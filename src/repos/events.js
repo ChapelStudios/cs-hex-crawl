@@ -6,16 +6,13 @@ import { ZoneEvents } from "../constants/events/zoneEvents.js";
 import { artPath } from "../constants/paths.js";
 import { isWithinNumberRange, rollWeighted } from "../helpers/math.js";
 import { updateScene } from "../helpers/update.js";
-import { getForagingBounty } from "./foraging.js";
+import { registerWithSocketReady } from "../socket.js";
+import { createForagingBounty } from "./foraging.js";
 import { getCurrentHours, getGameClock } from "./gameClock.js";
 import { getHexCrawlDataFromTile, getTileLocale, getTileZoneId, updateTileHexCrawlData } from "./tiles.js";
 
 // const encounterChance = 417;
 const encounterChance = 10000;
-export const eventsSocketConfig = (socket) => socket.register(
-  discoverTileActionName,
-  discoverTile,
-);
 
 // Discovery
 export const discoverTileActionName = 'discoverTile';
@@ -31,7 +28,7 @@ export const discoverTile = async (scene, tile, token) => {
   if (encounter.name === nullEvent.name) {
     encounter = getRandomEncounter(scene, token);
   }
-  const forageEvent = await getForagingBounty(tile, token);
+  const forageEvent = await createForagingBounty(tile, token);
   
   const events = {
     terrain: cleanEvent(terrainEvent),
@@ -45,8 +42,12 @@ export const discoverTile = async (scene, tile, token) => {
     events,
     isDiscovered: true,
   });
-
 }
+
+registerWithSocketReady(
+  discoverTileActionName,
+  discoverTile,
+);
 
 const cleanEvent = (event) => ({
   ...event,

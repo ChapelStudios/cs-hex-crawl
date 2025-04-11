@@ -12,15 +12,15 @@
       <div class="cs-dl3-activity-header">
         <div class="cs-dl3-header-left">
           <span class="cs-dl3-activity-title">{{title}} [{{timeCost}} hours]</span>
-          <!-- New container for checkmarks; these will appear next to the title -->
-          <span class="cs-dl3-checkmark-container"></span>
+          {{#if repeatable}}
+            <span class="cs-dl3-activity-repeatable">*</span>
+          {{/if}}
+          <span class="cs-dl3-details-toggle clickable-icon">
+            <i class="fa-duotone fa-solid fa-circle-caret-down" style="--fa-primary-opacity: 1; --fa-secondary-opacity: 0.4;"></i>
+          </span>
         </div>
-        <span class="cs-dl3-details-toggle clickable-icon">
-          <i class="fa-duotone fa-solid fa-circle-caret-down" style="--fa-primary-opacity: 1; --fa-secondary-opacity: 0.4;"></i>
-        </span>
-        {{#if repeatable}}
-          <span class="cs-dl3-activity-repeatable">*</span>
-        {{/if}}
+        <!-- New container for checkmarks; these will appear next to the title -->
+        <div class="cs-dl3-checkmark-container"></div>
       </div>
 
       <!-- Details appear directly under the header -->
@@ -65,12 +65,13 @@
   {{/each}}
 
   <!-- Footer -->
-<div class="cs-dl3-form-footer">
-  {{#if isGM}}
-    <button type="button" class="cs-dl3-clear-global-button">Clear All</button>
-  {{/if}}
-  <button type="button" class="cs-dl3-clear-button">Clear</button>
-  <button type="submit" class="cs-dl3-submit-button">Submit</button>
-</div>
+  <div class="cs-dl3-form-footer">
+    <button type="button" class="refresh-button">Refresh</button>
+    <button type="button" class="cs-dl3-clear-button">Clear</button>
+    <button type="submit" class="cs-dl3-submit-button">Submit</button>
+  </div>
 
+  {{#if isGM}}
+    {{> gmActionsList gmActionVms=gmActionVms }}
+  {{/if}}
 </form>

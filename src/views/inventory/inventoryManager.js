@@ -1,16 +1,21 @@
 import { moduleCodePath } from "../../constants/paths.js";
+import { registerPartial } from "../../helpers/display.js";
 import { convertHoursToDaysAndHours } from "../../helpers/math.js";
 import { getGameClock } from "../../repos/gameClock.js";
 import { getCampConfig, getPartyConfig, isPartyToken } from "../../repos/gameSettings.js";
 import { getProvisions, updateProvisions } from "../../repos/provisions.js";
 
 const localPath = (file) => `${moduleCodePath}views/inventory/${file}`;
+const getPartialPath = (partial) => localPath(`partials/${partial}.hbs`);
 
 // Register partials
-Handlebars.registerPartial('provisionFields', await fetch(localPath('partials/provisionFields.hbs')).then(response => response.text()));
-Handlebars.registerPartial('partyGroupInfoFields', await fetch(localPath('partials/partyGroupInfoFields.hbs')).then(response => response.text()));
-Handlebars.registerPartial('campGroupInfoFields', await fetch(localPath('partials/campGroupInfoFields.hbs')).then(response => response.text()));
-Handlebars.registerPartial('timeDataFields', await fetch(localPath('partials/timeDataFields.hbs')).then(response => response.text()));
+const partials = [
+  'provisionFields',
+  'partyGroupInfoFields',
+  'campGroupInfoFields',
+  'timeDataFields',
+];
+await Promise.all(partials.map(partialName => registerPartial(getPartialPath(partialName), partialName)));
 
 export class InventoryManager extends FormApplication {
   /**

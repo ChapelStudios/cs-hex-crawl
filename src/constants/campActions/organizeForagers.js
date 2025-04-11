@@ -1,3 +1,5 @@
+import { bonusTypes } from "./checkOnFaction.js";
+
 export const organizeForagers = {
   title: "Organize the Foragers",
   id: "organizeForagers",
@@ -33,8 +35,26 @@ export const organizeForagers = {
       skill: "sur",
       display: "Survival",
       rankRequirement: 5,
-      DC: 10,
+      dc: 10,
     },
   ],
-  getGmData: (context) => ({}),
+  resolveBonuses: async ({ checkResult, actionData, baseBonus }) => {
+    if (checkResult < actionData.skillDetails.dc) {
+      const msg = `${actionData.skillDetails.display} check of ${checkResult} failed to beat the DC of ${actionData.skillDetails.dc}`;
+      return Promise.resolve([{
+        ...baseBonus,
+        value: msg,
+        wasApplied: true,
+      }]);
+    }
+    else {
+      const excessPoints = checkResult - actionData.skillDetails.dc;
+      const extraBonus = (Math.floor(excessPoints / 5) + 1) * 2;
+      return Promise.resolve([{
+        ...baseBonus,
+        type: bonusTypes.nightlyForageBoost,
+        value: extraBonus,
+      }]);
+    }
+  },
 };

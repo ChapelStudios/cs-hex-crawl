@@ -109,7 +109,7 @@ export class HexInfo extends FormApplication {
   }
 
   async _handlePartyPickup() {
-    launchForagingYieldDetails(this.object, this.#activeToken, () => this.render());
+    launchForagingYieldDetails(this.object, this.#activeToken, () => this.render(true));
   }
 };
 

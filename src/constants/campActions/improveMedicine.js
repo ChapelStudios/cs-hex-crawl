@@ -1,3 +1,5 @@
+import { bonusTypes } from "./checkOnFaction.js";
+
 export const improveMedicine = {
   id: "improveMedicine",
   title: "Improve Medicine",
@@ -7,7 +9,7 @@ export const improveMedicine = {
   details: `
     <p><em>Requires Craft (Alchemy) 5 ranks or Heal 10 ranks</em></p>
     <p>
-      Upon a successful check, DC 15, Infirm only require 1/2 as much medicine 
+      Upon a successful check, DC 15 or 20 depending on the skill used, Infirm only require 1/2 as much medicine 
       (rounded down) during the next upkeep phase to gain its benefit. 
       For every 10 points that this check exceeds the maximum, the benefit lasts for an additional day.
     </p>
@@ -69,5 +71,21 @@ export const improveMedicine = {
     }
 
     return {};
+  },
+  resolveBonuses: async ({ checkResult, actionData, baseBonus }) => {
+    if (checkResult < actionData.skillDetails.dc) {
+      return Promise.resolve([{
+        ...baseBonus,
+        value: `${actionData.skillDetails.display} check of ${checkResult} failed to beat the DC of ${actionData.skillDetails.dc}`,
+        wasApplied: true,
+      }]);
+    }
+    const excessPoints = checkResult - actionData.skillDetails.dc;
+    const value = (Math.floor(excessPoints / 10) + 1)
+    return Promise.resolve([{
+      ...baseBonus,
+      type: bonusTypes.medicineBoost,
+      value,
+    }]);
   },
 };

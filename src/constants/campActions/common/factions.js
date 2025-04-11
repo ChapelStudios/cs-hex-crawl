@@ -1,6 +1,6 @@
 import { factions } from "../../../factions/factionInfo.js";
 import { getFactionData } from "../../../factions/factions.js";
-import { displayFactionSelector } from "../../../helpers/factionSelector.js";
+import { displayOptionSelector } from "../../../helpers/optionSelector.js";
 
 export const factionCode = {
   setMaxUsesToFactionCount: (bonusUses = 0) => () => {
@@ -41,7 +41,7 @@ export const factionCode = {
       return { isCancel: true };
     }
 
-    const selectedFaction = await displayFactionSelector(factionOptions);
+    const selectedFaction = await displayOptionSelector(factionOptions, "Faction");
 
     return {
       category: selectedFaction,
@@ -56,7 +56,7 @@ export const factionCode = {
       };
     }
     
-    const selectedFaction = await displayFactionSelector(selectedFactions);
+    const selectedFaction = await displayOptionSelector(selectedFactions, "Faction");
 
     return {
       category: selectedFaction,

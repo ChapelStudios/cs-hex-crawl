@@ -20,10 +20,7 @@ const partials = [
   'partyInventory',
   'categoryButtons'
 ];
-partials.forEach(partialName => {
-  const filePath = getPartialPath(partialName);
-  registerPartial(filePath, partialName);
-});
+await Promise.all(partials.map(partialName => registerPartial(getPartialPath(partialName), partialName)));
 
 class ForagingYieldDetails extends FormApplication {
   constructor(tile, token, options) {

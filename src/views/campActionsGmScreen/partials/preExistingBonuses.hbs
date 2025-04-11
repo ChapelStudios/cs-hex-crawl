@@ -1,0 +1,24 @@
+<div class="bonus-display">
+  <table class="bonus-table">
+    <thead>
+      <tr>
+        <th>Bonus Type</th>
+        <th>Value</th>
+        <th>Performance</th>
+        <th>Created Day</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each bonuses as |bonus|}}
+        <tr>
+          <td>{{getBonusDisplayName bonus.type}}</td>
+          <td>{{bonus.value}}</td>
+          <td>
+            {{bonus.origination.activity}}{{#if bonus.category}} - {{bonus.category}}{{/if}} by {{bonus.origination.performer}}
+          </td>
+          <td>{{bonus.createdDay}}</td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

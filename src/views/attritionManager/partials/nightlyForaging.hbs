@@ -1,0 +1,12 @@
+<section class="nightly-foraging">
+  <h3>Nightly Foraging</h3>
+  <p>{{getBonusDisplayName "nightlyForageBoost"}}: {{nightlyForageBonus}}</p>
+  <button class="perform-forage"{{#if forageDisabled}} disabled{{/if}}>Perform Forage</button>
+  {{#if forageYield}}
+    <p class="foraging-results">
+      {{#if forageYield.foodUnits}}Food Units: {{forageYield.foodUnits}}<br>{{/if}}
+      {{#if forageYield.spices}}Spices: {{forageYield.spices}}<br>{{/if}}
+      {{#if forageYield.medicine}}Medicine: {{forageYield.medicine}}{{/if}}
+    </p>
+  {{/if}}
+</section>

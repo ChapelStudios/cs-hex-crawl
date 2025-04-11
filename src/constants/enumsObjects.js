@@ -14,3 +14,9 @@ export const attributeTypes = {
   wis: "Wisdom",
   cha: "Charisma",
 };
+
+export const extraButtonTypes = {
+  checkBox: "checkBox",
+  button: "button",
+  select: "select",
+};

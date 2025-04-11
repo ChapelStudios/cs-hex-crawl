@@ -1,4 +1,6 @@
 import { getNestedProperty } from "../../helpers/entityTools.js";
+import { getCampToken } from "../../repos/gameSettings.js";
+import { getProvisions, updateProvisions } from "../../repos/provisions.js";
 
 export const createWeapons = {
   id: "createWeapons",
@@ -62,5 +64,29 @@ export const createWeapons = {
     return {
       aidSkills, // Updated aidSkills data
     };
+  },
+  resolveBonuses: async ({ checkResult, actionData, baseBonus, scene }) => {
+    let msg;
+    if (checkResult < actionData.skillDetails.dc) {
+      msg = `Was unable to get anything done.`
+    }
+    else {
+      const excessPoints = checkResult - actionData.skillDetails.dc;
+      const bonusSpears = (Math.floor(excessPoints / 10) + 1) * 5
+      const campToken = getCampToken(scene);
+      const existing = getProvisions(campToken);
+      await updateProvisions(campToken, {
+        makeShiftWeapons: bonusSpears + existing.makeShiftWeapons,
+      });
+
+      msg = `Created ${bonusSpears} Bonus Spears.`;
+    }
+    return Promise.resolve([
+      {
+        ...baseBonus,
+        value: msg,
+        wasApplied: true,
+      }
+    ]);
   },
 }

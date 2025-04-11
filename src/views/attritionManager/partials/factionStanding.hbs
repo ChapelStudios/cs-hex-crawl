@@ -1,0 +1,23 @@
+<section class="faction-influence">
+  <h3>Faction Influence</h3>
+  <button class="update-faction-standings">Update Faction Standings</button>
+  {{#each factions}}
+    <div class="faction">
+      <h4>{{name}}</h4>
+      <button class="update-faction-standings" data-faction="{{id}}">Update Faction Standings</button>
+      <p>Chance to decline: {{declineChance}}%</p>
+      <ul>
+        {{#each conditionModifiers}}
+          <li>{{this}}</li>
+        {{/each}}
+      </ul>
+      
+      <!-- Display Related Message -->
+      {{#with (lookup ../factionStandingResults id) as |relatedMsg|}}
+        {{#if relatedMsg}}
+          <p class="faction-message">Message: {{relatedMsg}}</p>
+        {{/if}}
+      {{/with}}
+    </div>
+  {{/each}}
+</section>

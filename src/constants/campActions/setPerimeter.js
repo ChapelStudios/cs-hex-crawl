@@ -1,4 +1,5 @@
 import { calculateSpellMaxUses } from "../../helpers/entityTools.js";
+import { bonusTypes } from "./checkOnFaction.js";
 
 export const setPerimeter = {
   title: "Set Perimeter",
@@ -48,7 +49,7 @@ export const setPerimeter = {
       display: "Abjuration Spell",
       rankRequirement: 1, // Spell level requirement
       maxUses: 0, // Default value; will be overridden by getSelectionData
-      DC: "N/A",
+      dc: "N/A",
     },
   ],
   getGmData: (context) => ({}),
@@ -72,5 +73,27 @@ export const setPerimeter = {
       return skill;
     });
     return { skills: updatedSkills };
+  },
+  resolveBonuses: async ({ checkResult, actionData, baseBonus }) => {
+    if (
+      (typeof actionData.skillDetails.dc === "number" && checkResult < actionData.skillDetails.dc)
+      || typeof actionData.skillDetails.dc === "string"
+    ) {
+      return Promise.resolve([{
+        ...baseBonus,
+        type: bonusTypes.moraleBoost,
+        value: 2,
+      }, {
+        ...baseBonus,
+        type: bonusTypes.combatBoost,
+        value: 2,
+      }]);
+    }
+    
+    return Promise.resolve([{
+      ...baseBonus,
+      value: `${actionData.skillDetails.display} check of ${checkResult} failed to beat the DC of ${actionData.skillDetails.dc}`,
+      wasApplied: true,
+    }]);
   },
 }

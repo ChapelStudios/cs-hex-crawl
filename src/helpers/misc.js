@@ -18,3 +18,11 @@ export const controlTokenIfNotAlready = (tokenId) => {
     console.log(`Token with ID ${tokenId} is already controlled.`);
   }
 };
+
+export function generateGUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0; // Random hex digit
+    const v = c === 'x' ? r : (r & 0x3 | 0x8); // Ensure 'y' follows RFC4122 rules
+    return v.toString(16);
+  });
+}

@@ -1,0 +1,42 @@
+<section class="conditions">
+  <h3>Current Conditions</h3>
+  <div class="conditions-container">
+    {{#each conditions}}
+      <div class="condition-item">
+        <input 
+          type="checkbox" 
+          id="condition-{{id}}" 
+          class="condition-checkbox" 
+          {{#if value}}checked{{/if}} 
+          {{#if disabled}}disabled{{/if}}
+        >
+        <label for="condition-{{id}}">{{name}}</label>
+        {{#if streak}}
+          <span class="condition-streak">Streak: {{streak}}</span>
+        {{/if}}
+      </div>
+    {{/each}}
+  </div>
+  <section class="conditions-table">
+    <h3>Conditions Overview</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Value</th>
+          <th>Streak</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each conditions}}
+          <tr>
+            <td>{{name}}</td>
+            <td>{{#if value}}Active{{else}}Inactive{{/if}}</td>
+            <td>{{streak}}</td>
+          </tr>
+        {{/each}}
+      </tbody>
+    </table>
+    <button class="reset-conditions">Reset Conditions</button>
+  </section>
+</section>

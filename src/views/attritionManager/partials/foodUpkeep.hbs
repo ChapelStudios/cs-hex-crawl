@@ -1,0 +1,16 @@
+<section class="food-upkeep">
+  <h3>Food Upkeep</h3>
+  <p>Total Population: {{populationTotals.total}}</p>
+  <p>Food Units Available: {{provisions.foodUnits}}</p>
+
+  <label for="rationing">Rationing Factor (e.g., 0.75 for 75%):</label>
+  <input id="rationing" type="number" step="0.01" min="0" max="1" value="1" />
+
+  <label for="food-to-be-consumed">Food to be Consumed:</label>
+  <input id="food-to-be-consumed" type="number" value="{{populationTotals.total}}" readonly />
+  <button class="consume-food"{{#if hasConsumedFood}} disabled{{/if}}>Consume Food</button>
+  <div class="food-consumed-container hidden">
+    <label for="food-consumption">Food Units Consumed:</label>
+    <input id="food-consumption" type="number" value="0" readonly />
+  </div>
+</section>

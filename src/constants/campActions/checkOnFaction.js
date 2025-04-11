@@ -1,3 +1,4 @@
+import { getFactionDataById } from "../../factions/factions.js";
 import { factionCode } from "./common/factions.js";
 
 export const checkOnFaction =  {
@@ -27,7 +28,7 @@ export const checkOnFaction =  {
       dc: 10
     },
     {
-      skill: "int",
+      skill: "intimidate",
       display: "Intimidate",
       dc: 10
     },
@@ -72,4 +73,87 @@ export const checkOnFaction =  {
   onUserPerform: factionCode.onUserPerform(),
   onUserUnselect: factionCode.onUserUnselect(),
   getCheckmarkData: factionCode.getCheckmarkData(),
+  resolveBonuses: async ({ checkResult, baseBonus, actionData, scene }) => {
+    const bonuses = [];
+    let value = 0;
+    let msgs = [];
+    const faction = getFactionDataById(scene, actionData.category);
+
+    if (checkResult < 6) {
+      value = -10;
+    }
+    else if (checkResult < 10) {
+      msgs.push("The investigation yields no results.");
+    }
+    else {
+      msgs.push(`Learn that ${faction.name} is ${faction.currentRep} towards the heroes.`);
+    }
+
+    if (checkResult > 14) {
+      msgs.push("Learn any available key info");
+    }
+
+    if (checkResult > 19) {
+      bonuses.push({
+        ...baseBonus,
+        type: bonusTypes.factionLeaderBonus,
+        value: 2,
+      });
+    }
+    
+    if (checkResult > 24) {
+      value = 10;
+    }
+
+    if (value !== 0) {
+      bonuses.push({
+        ...baseBonus,
+        type: bonusTypes.factionReputationAdjust,
+        value,
+      });
+    }
+
+    const intimidates = actionData.aids.filter(a => a.skill === "intimidate")
+      .map(ia => ({
+        ...baseBonus,
+        type: bonusTypes.intimidationTactic,
+        value: ia.checkResult.total,
+      }));
+
+    return Promise.resolve([
+      ...bonuses,
+      ...intimidates,
+      ...msgs.map(m => ({
+        ...baseBonus,
+        wasApplied: true,
+        value: m,
+      })),
+      {
+        ...baseBonus,
+        type: bonusTypes.factionWasContacted,
+        value: true,
+      },
+    ]);
+  }
+};
+
+export const bonusTypes = {
+  factionWasContacted: "factionWasContacted",
+  factionReputationAdjust: "factionReputationAdjust",
+  factionLeaderBonus: "factionLeaderBonus",
+  cookingBonus: "cookingBonus",
+  infirmHealed: "infirmHealed",
+  medicineBoost: "medicineBoost",
+  nightlyForageBoost: "nightlyForageBoost",
+  moraleBoost: "moraleBoost",
+  combatBoost: "combatBoost",
+  message: "message",
+  attackPreventionBonus: "attackPreventionBonus",  
+  spiceBoost: "spiceBoost",
+  forcedMarch: "forcedMarch",
+  violentInteraction: "violentInteraction",
+  intimidationTactic: "intimidationTactic",
+  refugeeDeaths: "refugeeDeaths",
+  newlyInfirmed: "newlyInfirmed",
+  foodFound: "foodFound",
 };

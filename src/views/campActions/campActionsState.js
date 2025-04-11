@@ -1,5 +1,6 @@
 import { campActionsData } from "../../constants/campActions/index.js";
-import { getCurrentCampActions, refreshCampActionsHandlerName, updateCurrentCampActions } from "../../repos/gameSettings.js";
+import { generateGUID } from "../../helpers/misc.js";
+import { getCampToken, getCurrentCampActions, refreshCampActionsHandlerName, updateCurrentCampActions } from "../../repos/gameSettings.js";
 import { getProvisions } from "../../repos/provisions.js";
 import { dl3HexCrawlSocket } from "../../socket.js";
 
@@ -12,6 +13,25 @@ const defaultState = {
 
 const getDefaultState = () => {
   return foundry.utils.deepClone(defaultState);
+}
+
+export const getEnrichedActivityData = (activityId, assignedActor) => {
+  const activity = campActionsData.find(a => a.id === activityId);
+
+  if (!activity) {
+    throw new Error(`Activity with ID ${activityId} not found`);
+  }
+
+  const context = {
+    activity,
+    provisions: getProvisions(getCampToken(canvas.scene)),
+    assignedActor,
+  };
+
+  return {
+    ...activity,
+    ...(activity.getEnrichedData?.(context) || {}),
+  };
 }
 
 export class CampActionsState {
@@ -28,22 +48,7 @@ export class CampActionsState {
   }
 
   getEnrichedActivityData(activityId) {
-    const activity = campActionsData.find(a => a.id === activityId);
-
-    if (!activity) {
-      throw new Error(`Activity with ID ${activityId} not found`);
-    }
-
-    const context = {
-      activity,
-      provisions: getProvisions(this.owner),
-      assignedActor: this.owner,
-    };
-
-    return {
-      ...activity,
-      ...(activity.getEnrichedData?.(context) || {}),
-    };
+    return getEnrichedActivityData(activityId, this.owner);
   }
 
   getState() {
@@ -87,14 +92,17 @@ export class CampActionsState {
     return this.getEnrichedActivityData(activityId)?.timeCost ?? 0;
   }
 
-  modifyHoursForPerformer(performer, activityId, isIncrement = false) {
-    const timeCost = this.getActivityTimeCost(activityId);
-    const hoursCost = isIncrement
-      ? timeCost
-      : timeCost * -1;
+  modifyHoursForPerformer(performer, activityId, isRefund = false, costOverride = null) {
+    const timeCost =  costOverride === null 
+      ? this.getActivityTimeCost(activityId)
+      : costOverride;
+    const hoursCost = isRefund
+      ? timeCost * -1
+      : timeCost;
 
     const hoursState = this.getHoursState();
-    hoursState[performer] = Math.max(0, (hoursState[performer] ?? 0) + hoursCost);
+    const existingHours = hoursState[performer] ?? 0;
+    hoursState[performer] = Math.max(0, existingHours + hoursCost);
   }
 
   _removeRelatedAidsIfNeeded(activityId, category) {
@@ -121,21 +129,21 @@ export class CampActionsState {
       .forEach(aid => {
         // Update hours for each aid before deletion
         for (let a = 0; a < aid.count; a++) {
-          this.modifyHoursForPerformer(aid.performer, aid.activityId, true);
+          this.modifyHoursForPerformer(aid.performer, aid.activityId, true, aid.costOverride);
         }
         aid.count = 0; // Reset aid count
       });
   }
   
   _removeActionAndUpdateHours(performer, action) {
-    const activities = this.getActivitiesState();
+    const activities = this.state.activities;
     const index = activities.findIndex(a => a === action)
     if (index > -1) {
       activities.splice(index, 1);
     }
 
     // Update performer's hours
-    this.modifyHoursForPerformer(performer, action.activityId, true);
+    this.modifyHoursForPerformer(performer, action.activityId, true, action.costOverride);
 
     // If it's not an aid, remove related aids
     if (!action.isAid) {
@@ -148,14 +156,18 @@ export class CampActionsState {
     skillCode,
     {
       isAid = false,
-      isDecrement = false,
-      locked = false,
+      isCountDecrement = false,
       suppressUpdate = false,
       performer = this.owner,
-      extraData: { category = null, ...extraData} = {}
+      locked = false,
+      extraData: {
+        category = null,
+        costOverride = null,
+        ...extraData
+      } = {}
     } = {} // options
   ) {    
-    const changeValue = isDecrement ? -1 : 1;
+    const changeValue = isCountDecrement ? -1 : 1;
     const actions = this.getActivitiesState();
     const existing = actions.find(a =>
       a.activityId === activityId
@@ -165,13 +177,15 @@ export class CampActionsState {
       && a.isAid === isAid
     )
 
-    if (!existing && isDecrement) {
+    if (!existing && isCountDecrement) {
       return;
     }
 
     if (existing) {
       existing.isLocked = locked;
-      existing.count += changeValue;
+      existing.count = isCountDecrement
+        ? Math.min(existing.count + changeValue, 0)
+        : existing.count + changeValue;
       existing.extraData = mergeObject(existing.extraData || {}, extraData);
     }
 
@@ -186,6 +200,8 @@ export class CampActionsState {
       count: 1,
       extraData,
       currentDay: this.currentDay,
+      id: generateGUID(),
+      costOverride,
     }
 
     if (!existing) {
@@ -197,7 +213,7 @@ export class CampActionsState {
       this._removeRelatedAidsIfNeeded(activityId, category);
     }
 
-    this.modifyHoursForPerformer(performer.name, activityId, !isDecrement);
+    this.modifyHoursForPerformer(performer.name, activityId, isCountDecrement, costOverride);
   
     await this._saveStateToScene({ performUpdate: !suppressUpdate });
   }
@@ -206,6 +222,20 @@ export class CampActionsState {
   async deleteUnlockedRowsForActor(performer = this.owner?.name) {
     const actions = this.getActivitiesState()
       .filter(a => a.performer === performer && !a.isLocked);
+    
+    for (const action of actions) {
+      this._removeActionAndUpdateHours(performer, action);
+    }
+
+    this.recalculateHoursForPerformer(performer);
+    // Save the updated state
+    await this._saveStateToScene();
+  }
+  
+  // GM Tool
+  async deleteAllRowsForActor(performer = this.owner?.name) {
+    const actions = this.getActivitiesState()
+      .filter(a => a.performer === performer);
     
     for (const action of actions) {
       this._removeActionAndUpdateHours(performer, action);
@@ -276,6 +306,16 @@ export class CampActionsState {
     this.getHoursState()[performer] = usedHours;
     return usedHours;
   }
+
+  removeAction(actionId) {
+    const actions = this.getActivitiesState()
+      .filter(a => a.id === actionId);
+
+    if (actions.length) {
+      const action = actions[0];
+      this._removeActionAndUpdateHours(action.performer, action);
+    }
+  }
 }
 
 export const verifyActivityHasBeenPerformed = (activityActions, { category = "*", ignorePerformer = null } = {}) => {
@@ -305,7 +345,6 @@ export const getSkillCountsByActivity = (activityActions, performer, { category 
   activityActions.forEach(action => {
     if (action.performer === performer) {
       if (action.isLocked) {
-        myLockedPerforms.push(action);
         if (action.isAid) {
           myLockedAids.push(action);
         }

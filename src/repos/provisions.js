@@ -1,4 +1,5 @@
 import { updateToken } from "../helpers/update.js";
+import { registerWithSocketReady } from "../socket.js";
 
 export const defaultProvisions = Object.freeze({
   carts: 0,
@@ -11,11 +12,6 @@ export const defaultProvisions = Object.freeze({
   foodWeight: 0,
   currentLoad: 0,
 });
-
-export const provisionsSocketConfig = (socket) => socket.register(
-  updateProvisionsActionName,
-  updateProvisions,
-);
 
 // Top Level
 export const getProvisions = (token) => {
@@ -36,6 +32,11 @@ export const updateProvisions = async (token, provisionsUpdate) => await updateT
     ...provisionsUpdate,
   },
 }, { diff: false });
+
+registerWithSocketReady(
+  updateProvisionsActionName,
+  updateProvisions,
+);
 
 // Starters
 export const getStartingCarts = (bonusCarts = 0) => 40 + bonusCarts;

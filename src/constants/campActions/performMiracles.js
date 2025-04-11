@@ -1,4 +1,6 @@
 import { calculateSpellMaxUses } from "../../helpers/entityTools.js";
+import { bonusTypes } from "./checkOnFaction.js";
+import { getManualResult } from "./common/getManualResult.js";
 
 export const performMiracles = {
   title: "Perform Miracles",
@@ -20,14 +22,14 @@ export const performMiracles = {
       display: "Healing Spell",
       rankRequirement: 1, // Spell level requirement
       maxUses: 1, // Default value; will be overridden by getSelectionData
-      DC: "N/A",
+      dc: "N/A",
     },
     {
       skill: "itemName",
       display: "Lay on Hands",
       rankRequirement: "Lay on Hands",
       maxUses: 1,
-      DC: "N/A",
+      dc: "N/A",
     },
   ],
   getGmData: (context) => ({}),
@@ -47,5 +49,15 @@ export const performMiracles = {
       return { ...skill };
     });
     return { skills: updatedSkills };
+  },
+  isNoCheck: true,
+  resolveBonuses: async ({ checkResult, baseBonus }) => {
+    checkResult = await getManualResult();
+    const value = Math.floor(checkResult / 5);
+    return Promise.resolve([{
+      ...baseBonus,
+      type: bonusTypes.infirmHealed,
+      value,
+    }]);
   },
 };

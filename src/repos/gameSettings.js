@@ -1,9 +1,7 @@
 import { hexTokenTypes } from "../constants/moveCosts.js";
 import { getFactionPopulationTotals } from "../factions/factions.js";
-import { requestSkillCheckActionName } from "../helpers/entityTools.js";
-import { getFogCanvas } from "../helpers/fog.js";
 import { updateActor, updateScene, updateToken } from "../helpers/update.js";
-import { executeForActorsAsync } from "../socket.js";
+import { registerWithSocketReady } from "../socket.js";
 
 // Shortcut til 12 where there is an actual CONST declared eg CONST.ENTITY_PERMISSIONS.OWNER;
 const OWNER_PERMISSION = 3;
@@ -24,28 +22,9 @@ export const setMoveHoverState = async (newState) => await game.user.update({
   ['flags.hexCrawl.isMoveHoverState']: newState,
 });
 
-export const flipMoveHoverState = async (scene) => {
+export const flipMoveHoverState = async () => {
   const newState = !isMoveHoverStateActive()
   await setMoveHoverState(newState);
-
-  // if (newState) {
-  //   const updateFogCanvas = async () => {
-  //     try {
-  //       // Re-create the fog canvas from the scene's fogExplored data.
-  //       game.hexCrawl.fogCanvas = await getFogCanvas();
-  //     } catch (err) {
-  //       console.error("Error updating fog canvas", err);
-  //     }
-  //   };
-
-  //   if (window.requestIdleCallback) {
-  //     window.requestIdleCallback(updateFogCanvas);
-  //   } else {
-  //     setTimeout(updateFogCanvas, 0);
-  //   }
-  // } else {
-  //   game.hexCrawl.fogCanvas = null;
-  // }
 };
 
 // init
@@ -285,11 +264,14 @@ export const confirmTokenDelete = async (token) => new Promise((resolve) => {
 // Camp Actions
 export const refreshCampActionsHandlerName = "refreshCampActions";
 export const campActionsAppId = "cs-hex-camp-actions-app";
+export const gmCampActionsAppId = "cs-hex-gm-camp-actions-app";
 
 export const refreshCampActions = async () => {
   for (const app of Object.values(ui.windows)) {
     // Check if the app matches the campActionsAppId
-    if (app.id === campActionsAppId) {
+    if (game.user.isGM && app.id === gmCampActionsAppId) {
+      app.updateActions();
+    } else if (app.id === campActionsAppId) {
       // Tell the app to refresh itself
       // TODO: hide the state manager and make a wrapper
       app.stateManager.refreshStateFromScene();
@@ -400,6 +382,17 @@ export const getLockedActions = (scene, currentDay) => getCurrentCampActions(sce
   && a.count > 0
 );
 
+export const saveAttritionBonusInfo = async (scene, bonuses) =>
+  await updateToken(getCampToken(scene), { [`flags.hexCrawl.attritionBonuses`]: bonuses }, { diff: false });
+export const getAttritionBonusInfo = (scene) => [...(getCampToken(scene)?.flags.hexCrawl?.attritionBonuses || [])];
+
+export const saveGmActionsVM = async (scene, currentDay, actionsVM) =>
+  await updateToken(getCampToken(scene), { [`flags.hexCrawl.gmActionsVM.${currentDay}`]: actionsVM }, { diff: false });
+export const getGmActionsVM = (scene, currentDay) => getCampToken(scene)?.flags.hexCrawl?.gmActionsVM?.[currentDay] || [];
+
+export const saveAttritionConditionInfo = async (scene, conditions) =>
+  await updateToken(getCampToken(scene), { [`flags.hexCrawl.attritionConditionInfo`]: conditions }, { diff: false });
+export const getAttritionConditionInfo = (scene) => [...(getCampToken(scene)?.flags.hexCrawl?.attritionConditionInfo || [])];
 
 export const saveActionsRequestActionName = 'saveActionsRequest';
 const saveActionsRequest = async (scene, newActions) => {
@@ -410,43 +403,11 @@ const saveActionsRequest = async (scene, newActions) => {
   });
 };
 
-export const settingsSocketConfig = (socket) => {
-  socket.register(
-    saveActionsRequestActionName,
-    saveActionsRequest,
-  );
-  socket.register(
-    refreshCampActionsHandlerName,
-    refreshCampActions,
-  );
-};
-
-export const processActionRolls = async (actionData, baseActivity) => {
-  // Batch process performer rolls
-  const performerResults = await executeForActorsAsync(
-    requestSkillCheckActionName,
-    (actionData.performers || []).map((performer) => performer.actorId), // Use actor IDs directly
-    baseActivity.skill // Common skill for all performers
-  );
-
-  // Process aide rolls individually
-  const aidePromises = (actionData.aides || []).map(async (aide) => {
-    const rollResult = await executeForActorsAsync(
-      requestSkillCheckActionName,
-      [aide.actorId], // Single actor ID as array
-      aide.skill // Skill specific to the aide
-    );
-    return { name: aide.name, rollResult: rollResult[aide.actorId], dc: aide.dc };
-  });
-
-  const aideResults = await Promise.all(aidePromises);
-
-  // Combine results into a single object
-  return {
-    performers: Object.entries(performerResults).map(([actorId, rollResult]) => ({
-      name: game.actors.get(actorId)?.name, // Retrieve the name for readability
-      rollResult,
-    })),
-    aides: aideResults,
-  };
-};
+registerWithSocketReady(
+  saveActionsRequestActionName,
+  saveActionsRequest,
+);
+registerWithSocketReady(
+  refreshCampActionsHandlerName,
+  refreshCampActions,
+);

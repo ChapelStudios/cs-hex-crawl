@@ -1,13 +1,15 @@
-export async function displayFactionSelector(factionOptions) {
+export async function displayOptionSelector(options, optionTypeName) {
   return new Promise((resolve) => {
     // Define the form's HTML content
+    const optionId = optionTypeName.toLowerCase()
+      .replace(/\s+/g, '-');
     const content = `
       <form>
         <div class="form-group">
-          <label for="faction-select">Select a Faction</label>
-          <select id="faction-select" name="faction">
-            ${factionOptions.map(faction => 
-              `<option value="${faction.id}">${faction.name}</option>`
+          <label for="${optionId}-select">Select a ${optionTypeName}</label>
+          <select id="${optionId}-select" name="${optionId}">
+            ${options.map(option => 
+              `<option value="${option.id}">${option.name}</option>`
             )}
           </select>
         </div>
@@ -16,22 +18,22 @@ export async function displayFactionSelector(factionOptions) {
 
     // Render a dialog
     new Dialog({
-      title: "Faction Selector",
+      title: `${optionTypeName} Selector`,
       content,
       buttons: {
         submit: {
           label: "Submit",
           callback: (html) => {
-            const selectedFaction = html.find('[name="faction"]').val();
+            const selectedFaction = html.find(`[name="${optionId}"]`).val();
             resolve(selectedFaction); // Return the selected faction
-          }
+          },
         },
         cancel: {
           label: "Cancel",
           callback: () => resolve(null) // Return null if canceled
-        }
+        },
       },
-      default: "submit"
+      default: "submit",
     }).render(true);
   });
 }

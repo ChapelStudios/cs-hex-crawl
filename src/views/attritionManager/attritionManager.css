@@ -1,97 +1,226 @@
-/* General Form Styling */
-.attrition-form {
+/* General Styling */
+.attrition-manager {
   font-family: Arial, sans-serif;
-  margin: 20px;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 10px;
-  background-color: #f9f9f9;
-  max-width: 1000px; /* Adjust as needed */
+  max-width: 800px; /* Increased width for better readability */
+  margin: 20px auto;
+  padding: 10px;
 }
 
-/* Circumstance Section */
-.circumstance {
-  margin-bottom: 15px;
+/* Navigation Bar */
+.attrition-manager .attrition-steps {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 20px;
+}
+
+.attrition-manager .step-button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  flex: 1; /* Equal button size */
+  margin: 0 4px;
+}
+
+.attrition-manager .step-button:hover {
+  background-color: #2980b9;
+}
+
+.attrition-manager .step-button[active] {
+  background-color: #1f78c1; /* Distinct shade for active steps */
+  font-weight: bold;
+}
+
+/* Shared Section Styling */
+.attrition-manager section {
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.attrition-manager section h3 {
+  font-size: 1.6rem;
+  margin-bottom: 12px;
+  color: #34495e;
+}
+
+.attrition-manager p,
+.attrition-manager label {
+  font-size: 1.1rem;
+  color: #2c3e50;
+  margin: 6px 0;
+}
+
+.attrition-manager input {
+  width: 100%;
   padding: 10px;
+  margin-bottom: 12px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  background-color: #ffffff;
+  box-sizing: border-box;
+}
+
+.attrition-manager button {
+  background-color: #3498db;
+  color: white;
+  padding: 12px 18px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.attrition-manager button:hover {
+  background-color: #2980b9;
+}
+
+.attrition-manager button:disabled {
+  background-color: #b0c4de; /* Disabled state styling */
+  cursor: not-allowed;
+}
+
+/* Step Navigation Styling */
+.step-navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+
+.step-navigation button {
+  width: 120px;
+  font-size: 1.1rem;
+}
+
+/* Section-Specific Styling */
+.nightly-foraging h3 {
+  color: #8a613a;
+}
+
+.food-upkeep h3 {
+  color: #34495e;
+}
+
+.medicine-upkeep h3 {
+  color: #2a6478;
+}
+
+.conditions h3,
+.conditions-table h3 {
+  color: #87431d;
+}
+
+.health-management h3 {
+  color: #2b7a78;
+}
+
+.resolve-attrition h3 {
+  color: #34495e;
+}
+
+.faction-influence h4 {
+  font-size: 1.4rem;
+  color: #3e4a56;
+}
+
+/* Conditions Section */
+.conditions {
+  font-family: Arial, sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.conditions-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Two equal-width columns */
+  column-gap: 20px;
+  row-gap: 15px;
+  align-items: center;
+  border-right: 1px solid #ccc; /* Divider between rows */
+  padding: 10px;
+}
+
+.condition-item {
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.condition-checkbox {
+  margin-right: 10px;
+  transform: scale(1.2); /* Makes checkbox slightly larger for better visibility */
+}
+
+.condition-item label {
+  font-size: 1.1rem;
+  color: #34495e;
+  flex-grow: 1; /* Ensures labels take up available space */
+}
+
+.condition-streak {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  margin-left: 15px; /* Adds space between label and streak text */
+}
+
+/* Accessibility Styling */
+.condition-checkbox:disabled + label {
+  color: #b0c4de; /* Faded text for disabled items */
+  text-decoration: line-through; /* Optional: visually indicate disabled state */
+}
+
+/* Step Content Styling */
+.step-content {
+  padding: 20px;
   border: 1px solid #ddd;
   border-radius: 8px;
-  background-color: #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Horizontal Layout for Rows */
-.circumstance-row {
-  display: flex;
-  flex-wrap: wrap; /* Allow elements to wrap if screen is small */
-  justify-content: space-between;
-  align-items: center;
-  gap: 15px;
+/* Conditions Table */
+.conditions-table table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-/* Details Section */
-.details {
-  flex: 1 1 250px; /* Grow or shrink, min width 250px */
-  font-size: 0.9em;
-  color: #555;
+.conditions-table th,
+.conditions-table td {
+  border: 1px solid #ddd;
+  padding: 10px;
+  text-align: left;
+  font-size: 1rem;
 }
 
-.details p {
-  margin: 5px 0;
-}
-
-.details .chance,
-.details .degree {
-  font-weight: bold;
+.conditions-table th {
+  background-color: #e0e0e0;
   color: #000;
 }
 
-/* Modifiers Section */
-.modifiers {
-  flex: 1 1 300px; /* Adjust width */
-  font-size: 0.9em;
+.conditions-table tbody tr:nth-child(odd) {
+  background-color: #f7f7f7;
 }
 
-.modifiers h4 {
-  margin-bottom: 5px;
-  font-size: 1em;
-  color: #666;
+/* Accessibility Enhancements */
+.attrition-manager button, .attrition-manager input, .attrition-manager label {
+  font-size: 1.1rem;
+  line-height: 1.5; /* Improved readability */
 }
 
-.modifier {
-  display: block;
-  margin: 5px 0;
-  color: #444;
+.attrition-manager button:focus {
+  outline: 2px solid #1f78c1; /* Highlight on focus for accessibility */
 }
 
-.modifier input {
-  margin-right: 5px;
+.attrition-manager .step-button:focus {
+  outline: 2px solid #ffcc00; /* Clear focus highlight */
 }
 
-/* Dynamic Input Section */
-.dynamic-input-section {
-  flex: 0 0 200px; /* Fixed width */
-}
-
-.dynamic-input-section label {
-  color: #444;
-}
-
-/* Input Fields */
-input[type="number"] {
-  width: 60px;
-  padding: 5px;
-  font-size: 0.9em;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-/* Media Queries for Responsive Design */
-@media (max-width: 600px) {
-  .circumstance-row {
-    flex-direction: column; /* Stack vertically on smaller screens */
-  }
-
-  .dynamic-input-section {
-    flex: 1 1 100%;
-  }
-}

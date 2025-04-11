@@ -40,14 +40,17 @@ export const replaceActorIdsWithNames = async (forageCheckResults) => {
   };
 };
 
-export const registerPartial = (filePath, partialName) => {
-  fetch(filePath)
-    .then(response => response.text())
-    .then(templateContent => {
-      Handlebars.registerPartial(partialName, templateContent);
-    })
-    .catch(error => console.error(`Error loading partial ${partialName}:`, error));
+export const registerPartial = async (filePath, partialName) => {
+  try {
+    const response = await fetch(filePath); // Fetch the template file
+    const templateContent = await response.text(); // Read response as text
+    Handlebars.registerPartial(partialName, templateContent); // Register the partial
+    console.log(`Partial registered successfully: ${partialName}`);
+  } catch (error) {
+    console.error(`Error loading partial ${partialName}:`, error);
+  }
 };
+
 
 export const loadStylesheet = (path) => {
   // Check if the stylesheet is already appended

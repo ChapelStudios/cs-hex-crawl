@@ -1,0 +1,50 @@
+<div class="gm-actions-container">
+  <div class="gm-buttons-container">
+      <button type="button" class="cs-dl3-clear-global-button">Clear All</button>
+      <button type="button" class="cs-dl3-clear-locked-button">Clear Locked</button>
+  </div>
+  <div class="actions-header">All Actions</div>
+  <div class="actions-details" class="hidden">
+    <table id="actions-table">
+      <thead>
+        <tr>
+          <th>Is Locked</th>
+          <th>Current Day</th>
+          <th>Activity Name</th>
+          <th>Performer</th>
+          <th>Skill</th>
+          <th>Is Aid</th>
+          <th>Category</th>
+          <th>Count</th>
+          <th>Time Cost</th>
+          <th>Extra Data</th>
+          <th>Cost Override</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each gmActionVms}}
+        <tr>
+          <td>
+            <input type="checkbox" disabled {{#if this.isLocked}}checked{{/if}}>
+          </td>
+          <td>{{this.currentDay}}</td>
+          <td>{{this.activityName}}</td>
+          <td>{{this.performer}}</td>
+          <td>{{this.skillName}}</td>
+          <td>
+            <input type="checkbox" disabled {{#if this.isAid}}checked{{/if}}>
+          </td>
+          <td>{{this.category}}</td>
+          <td>{{this.count}}</td>
+          <td>{{this.timeCost}}</td>
+          <td>{{this.extraDataString}}</td>
+          <td>{{this.costOverride}}</td>
+          <td>
+            <button type="button" class="remove-button" data-action-id="{{this.id}}">Remove</button>
+          </td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </div>
+</div>

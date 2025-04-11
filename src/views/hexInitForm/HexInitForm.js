@@ -41,7 +41,7 @@ export class HexInitForm extends FormApplication {
     initGroupConfig(this.object, {});
     resetGameClock(tokens);
     resetEventsForAllTiles(this.object);
-    this.render();
+    this.render(true);
   }
 
   /** 

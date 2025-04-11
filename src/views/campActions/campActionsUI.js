@@ -1,5 +1,5 @@
 // import clsx from "../../node_modules/clsx/index.js";
-import { getSkillDisplay } from "../../constants/campActions/index.js";
+import { getSkillDisplay } from "../../constants/campActions/common/helpers.js";
 import { artPath } from "../../constants/paths.js";
 import { clsx } from "../../helpers/display.js";
 import { generateSkillChoices } from "../../helpers/entityTools.js";
@@ -168,6 +168,13 @@ export function updateAidButtonState(element, activityActions, activity, actorNa
   performButton.prop("disabled", isDisabled);
 }
 
+export const lookUpSkillDisplay = (skillCode, activity) => {
+  const skillDisplay = getSkillDisplay(skillCode)
+    || activity.skills.find(s => s.skill === skillCode)?.display
+    || skillCode;
+  return skillDisplay;
+}
+
 /**
  * Updates the checkmarks DOM based on completed actions and aids.
  */
@@ -184,9 +191,10 @@ export function updateCheckmarks(element, activityActions, activity, actorName) 
   } = getSkillCountsByActivity(activityActions, actorName);
 
   const appendCheckmarks = (actions, { isAid = false, unlocked = false } = {}) => {
-    for (const { activityId, skillCode, category } of actions) {
-      const extraCheckMarkText = activity.getCheckmarkData?.({ category }) || '';
-      const altText = `${isAid ? "Aided" : "Performed"} with ${getSkillDisplay(skillCode)}${extraCheckMarkText}`;
+    for (const { activityId, skillCode, category, costOverride } of actions) {
+      const extraCheckMarkText = activity.getCheckmarkData?.({ category, costOverride }) || '';
+      const skillDisplay = lookUpSkillDisplay(skillCode, activity);
+      const altText = `${isAid ? "Aided" : "Performed"} with ${skillDisplay}${extraCheckMarkText}`;
       const className = clsx([
         "cs-dl3-checkmark",
         (isAid && unlocked) && "cs-dl3-aid-checkmark",

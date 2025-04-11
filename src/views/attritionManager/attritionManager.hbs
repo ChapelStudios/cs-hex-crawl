@@ -1,39 +1,25 @@
-<form id="attrition-form" class="attrition-form">
-  {{#each circumstances}}
-  <div class="circumstance">
-    <h3>{{this.name}}</h3>
-    <div class="circumstance-row">
-      <div class="details">
-        <p>Chance: <span class="chance" data-base="{{this.baseChance}}" data-index="{{@index}}">
-          {{this.baseChance}}%
-        </span></p>
-        <p>Degree: <span class="degree" data-degree="{{this.degree}}" data-index="{{@index}}">
-          {{this.degree}}
-        </span></p>
-      </div>
+<div class="attrition-manager">
+  <!-- Navigation -->
+  <nav class="attrition-steps">
+    {{#each steps}}
+      <button class="step-button" data-step="{{stepIndex}}" {{#if isActive}}active{{/if}}>
+        {{name}}
+      </button>
+    {{/each}}
+  </nav>
+  <h2>Attrition Manager</h2>
 
-      {{#if this.modifiers}}
-      <div class="modifiers">
-        <h4>Modifiers</h4>
-        {{#each this.modifiers}}
-        <label class="modifier">
-          <input type="checkbox" class="modifier-checkbox" data-index="{{@index}}" data-mod-index="{{@index}}">
-          {{this.name}}
-        </label>
-        {{/each}}
-      </div>
-      {{/if}}
-
-      {{#if this.dynamicChance}}
-      <div class="dynamic-input-section">
-        <label>
-          Days: <input type="number" class="dynamic-input" data-index="{{@index}}" value="0" min="0">
-        </label>
-      </div>
-      {{/if}}
-    </div>
+  <!-- Main Content -->
+  <div class="step-content">
+    <!-- Partial Rendering -->
+    {{#with (lookup steps currentStepIndex)}}
+      {{renderPartial this.partial}}
+    {{/with}}
   </div>
-  {{/each}}
 
-  {{> campActions factions}}
-</form>
+  <!-- Navigation Buttons -->
+  <div class="step-navigation">
+    <button class="step-prev" {{#unless hasPreviousStep}}disabled{{/unless}}>Previous Step</button>
+    <button class="step-next" {{#unless hasNextStep}}disabled{{/unless}}>Next Step</button>
+  </div>
+</div>

@@ -1,54 +1,112 @@
 <form class="camp-actions-gm-screen">
-  <div class="header">
+  <div class="cs-hc-header">
     <p class="current-day">Current Day: {{currentDay}}</p>
+      {{#if preExistingBonuses.length}}
+        <div class="cs-hc-bonuses-section">
+          {{> preExistingBonuses bonuses=preExistingBonuses}}
+        </div>
+      {{/if}}
   </div>
 
-  {{!-- Dynamically include a partial based on the activity's id --}}
-  {{!-- {{#each activities}}
-    {{!-- {{> (lookup . "id") this }}
-  {{!-- {{/each}}
-
-  {{#each activities as |activityId|}}
-    <section>
-      <h2>Activity ID: {{activityId}}</h2>
-
-      {{#each this.[activityId].performers as |performerRows performer|}}
-        <div class="performer-section">
-          <h3>Performer: {{performer}}</h3>
-          
-          {{#each performerRows as |performerRow|}}
-            <p>
-              {{#if performerRow.category}}
-                <strong>Category:</strong> {{performerRow.category}}
-              {{/if}}
-              <br>
-              <strong>Skill Code:</strong> {{performerRow.skillCode}}
-              <br>
-              <strong>Count:</strong> {{performerRow.count}}
-            </p>
-          {{/each}}
-
-          {{#if this.[activityId].aides.[performer]}}
-            <div class="aides-section">
-              <h4>Aides for {{performer}}</h4>
-              {{#each this.[activityId].aides.[performer] as |aidRow|}}
-                <p>
-                  {{#if aidRow.category}}
-                    <strong>Category:</strong> {{aidRow.category}}
-                  {{/if}}
-                  <br>
-                  <strong>Skill Code:</strong> {{aidRow.skillCode}}
-                  <br>
-                  <strong>Count:</strong> {{aidRow.count}}
-                </p>
-              {{/each}}
-            </div>
-          {{else}}
-            <p>No aides assigned to this performer.</p>
-          {{/if}}
+  <div class="cs-hc-activities-grid">
+    {{#each actionsByActivity as |activityGroup|}}
+      <section class="cs-hc-activity-card">
+        <h2 class="cs-hc-activity-title" data-activity-id="{{activityGroup.id}}">
+          {{activityGroup.title}}
+        </h2>
+        <div class="cs-hc-activity-details cs-hc-hidden">
+          {{{activityGroup.details}}}
         </div>
-      {{/each}}
-    </section>
-  {{/each}}
 
+        <div class="cs-hc-performers-section">
+          <h3>Performances:</h3>
+          {{#each activityGroup.performances as |performanceVM|}}
+            <div class="cs-hc-performer">
+              <p><strong>Performer:</strong> {{performanceVM.performer}}</p>
+              <p>
+                {{#if performanceVM.category}}
+                <strong>Category:</strong> {{performanceVM.category}}
+                <br>
+                {{/if}}
+                <strong>Skill:</strong> {{performanceVM.skillDetails.display}} 
+                (DC: {{performanceVM.skillDetails.dc}})
+                <br>
+                <strong>Count:</strong> {{performanceVM.count}}
+              </p>
+              {{#if performanceVM.result}}
+                <p><strong>Roll Result:</strong> {{performanceVM.result.total}}</p>
+                <p><strong>Aid Total:</strong> {{performanceVM.result.aidTotal}}</p>
+                <p><strong>Check Total:</strong> {{performanceVM.result.aidedTotal}}</p>
+              {{/if}}
+
+              {{#if performanceVM.aids}}
+                <div class="cs-hc-aides-section">
+                  <h4>Aides:</h4>
+                  {{#each performanceVM.aids as |aidRow|}}
+                    <p><strong>Aide:</strong> {{aidRow.performer}}</p>
+                    <p>
+                      <strong>Skill:</strong> {{aidRow.skillDetails.display}} 
+                      (DC: {{aidRow.skillDetails.dc}})
+                      <br>
+                      <strong>Count:</strong> {{aidRow.count}}
+                    </p>
+                    {{#if aidRow.result}}
+                      <p><strong>Aide Roll:</strong> {{aidRow.result.total}} 
+                      (Skill: {{aidRow.skillDetails.display}}, DC: {{aidRow.skillDetails.dc}})
+                      </p>
+                    {{/if}}
+                  {{/each}}
+                </div>
+              {{/if}}
+
+              {{#if performanceVM.messages}}
+                <div class="cs-hc-messages-section">
+                  <h4>Messages:</h4>
+                  <ul>
+                    {{#each performanceVM.messages as |message|}}
+                      <li>{{message.value}}</li>
+                    {{/each}}
+                  </ul>
+                </div>
+              {{/if}}
+
+              {{> bonusDisplay bonuses=performanceVM.bonuses}}
+
+              <button type="button" class="cs-hc-perform-button" data-action-id="{{performanceVM.id}}" data-activity-id="{{activityGroup.id}}">
+                Call for Performance
+              </button>
+
+              
+              <!-- Extra Buttons Section -->
+              <div class="cs-hc-extra-buttons">
+                {{#each performanceVM.extraButtons as |button|}}
+                  {{#if (eq button.type "checkBox")}}
+                    <label>
+                      <input type="checkbox" class="extra-button" data-activity-id="{{activityGroup.id}}" data-action-id="{{activityGroup.id}}" data-button-id="{{button.id}}">
+                      {{button.label}}
+                    </label>
+                  {{else if (eq button.type "button")}}
+                    <button type="button" class="extra-button" data-activity-id="{{activityGroup.id}}" data-action-id="{{activityGroup.id}}" data-button-id="{{button.id}}">
+                      {{button.label}}
+                    </button>
+                  {{/if}}
+                {{/each}}
+              </div>
+            </div>
+          {{/each}}
+        </div>
+      </section>
+    {{/each}}
+  </div>
+
+  <div class="cs-hc-buttons-container">
+    <button type="button" class="refresh-button">Refresh</button>
+    <button type="button" class="cs-hc-clear-button">Clear</button>
+    <button type="button" class="cs-hc-save-results-button">Lock-In</button>
+  </div>
+
+  
+  {{#if isGM}}
+    {{> gmActionsList gmActionVms=gmActionVms }}
+  {{/if}}
 </form>

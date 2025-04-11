@@ -1,0 +1,38 @@
+<section class="resolve-attrition">
+  <h3>Resolve Nightly Attrition</h3>
+  <button class="resolve-nightly-attrition">Resolve Nightly Attrition</button>
+  {{#if attritionDetails.length}}
+    <section class="attrition-details">
+      <h3>Attrition Summary</h3>
+      <ul class="attrition-list">
+        {{#each attritionDetails}}
+          <li class="attrition-item">
+            <div class="condition-name">
+              <strong>Condition:</strong> {{condition}}
+            </div>
+            {{#if diceAdded}}
+              <div class="dice-notation">
+                <strong>Dice Notation:</strong> {{diceAdded}}
+              </div>
+            {{/if}}
+            {{#if removedFromInfirm}}
+              <div class="removed-infirm">
+                <strong>Removed from Infirm:</strong> {{removedFromInfirm}}
+              </div>
+            {{/if}}
+            {{#if removedFromTotal}}
+              <div class="removed-total">
+                <strong>Removed from Total Population:</strong> {{removedFromTotal}}
+              </div>
+            {{/if}}
+            <div class="explanation">
+              <strong>Explanation:</strong> {{explanation}}
+            </div>
+          </li>
+        {{/each}}
+      </ul>
+    </section>
+  {{else}}
+    <p>Attrition hasn't been resolved yet.</p>
+  {{/if}}
+</section>

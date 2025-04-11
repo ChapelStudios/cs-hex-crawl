@@ -14,17 +14,16 @@ import { launchPartyManager } from "./views/partyManager/PartyManager.js";
 import { onTokenMove } from "./repos/moves.js";
 import { applyHexCrawlHudToHtml } from "./views/hexCrawlTokenHUD/HexCrawlTokenHUD.js";
 import { launchFactionManager } from "./views/factionManager/FactionManager.js";
-import { convertToHoursAndMinutes, isWithinRange } from "./helpers/math.js";
+import { convertToHoursAndMinutes } from "./helpers/math.js";
 import { getTileByLocationActionName, resetEventsForAllTiles } from "./repos/tiles.js";
 import { launchAttritionManager } from "./views/attritionManager/AttritionManager.js";
 import { launchCampActionsGmScreen } from "./views/campActionsGmScreen/CampActionsGmScreen.js";
 import { updateToken } from "./helpers/update.js";
-import { cachePixelData, checkVisibility, checkVisibilityForTokens, getFogCanvas, isAreaExplored } from "./helpers/fog.js";
+import { checkVisibilityForTokens } from "./helpers/fog.js";
 import { snapToAlternatingHexGrid } from "./helpers/display.js";
 
 // Register public API
 Hooks.once("init", async function () {
-
   // Needs 12
   //CONFIG.Token.hudClass = HexCrawlTokenHUD;
   
@@ -202,7 +201,19 @@ Handlebars.registerHelper('range', function (start, end) {
   return range;
 });
 Handlebars.registerHelper('eq', (a, b) => a === b);
+Handlebars.registerHelper('logError', (msg) => console.error(JSON.stringify(msg)));
+Handlebars.registerHelper('renderPartial', function (partialName, options) {
+  if (Handlebars.partials[partialName]) {
+    const template = Handlebars.partials[partialName];
+    const compiledTemplate = typeof template === 'string' ? Handlebars.compile(template) : template;
 
+    // Use Handlebars.SafeString to ensure the HTML is not escaped
+    return new Handlebars.SafeString(compiledTemplate(options.data.root));
+  }
+
+  console.error(`Partial not found: ${partialName}`);
+  return '';
+});
 
 
 Hooks.on('createToken', async (tokenDoc, options, userId) => {
@@ -224,7 +235,10 @@ Hooks.on('preUpdateToken', async (token, updates, options, userId) => {
   if (tokenUpdateInProgress) return; // Skip if this is an internal update
   tokenUpdateInProgress = true;
   try {
-    await onTokenMove(canvas.scene, token, updates, options, userId);
+    const newTile = await onTokenMove(canvas.scene, token, updates, options, userId);
+    if (newTile) {
+      await renderHexMoveInfo(newTile, token);
+    }
   } finally {
     tokenUpdateInProgress = false;
   }

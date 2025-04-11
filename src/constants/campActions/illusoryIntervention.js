@@ -1,4 +1,5 @@
 import { calculateSpellMaxUses } from "../../helpers/entityTools.js";
+import { bonusTypes } from "./checkOnFaction.js";
 
 export const illusoryIntervention =   {
   title: "Illusory Intervention",
@@ -16,14 +17,13 @@ export const illusoryIntervention =   {
   aidSkills: [],
   skills: [
     {
-      skill: "arcane",
+      skill: "arcane-1",
       display: "Illusion Spell",
       rankRequirement: 1, // Spell level requirement
       maxUses: 0, // Default value; will be overridden by getSelectionData
-      DC: "N/A",
+      dc: "N/A",
     },
   ],
-  getGmData: (context) => ({}),
   getEnrichedData: ({ assignedActor, activity }) => {
     // For spell-based skills (divine/arcane), override maxUses with the sum of available uses.
     const updatedSkills = activity.skills.map((skill) => {
@@ -45,4 +45,10 @@ export const illusoryIntervention =   {
     });
     return { skills: updatedSkills };
   },
+  isNoCheck: true,
+  resolveBonuses: async ({ baseBonus }) => Promise.resolve([{
+    ...baseBonus,
+    type: bonusTypes.attackPreventionBonus,
+    value: 5,
+  }]),
 };

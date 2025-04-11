@@ -2,7 +2,7 @@ import { csDebounce, snapToAlternatingHexGrid } from "../../helpers/display.js";
 import { calculateSpellMaxUses } from "../../helpers/entityTools.js";
 import { controlTokenIfNotAlready } from "../../helpers/misc.js";
 import { getCampToken } from "../../repos/gameSettings.js";
-import { dl3HexCrawlSocket } from "../../socket.js";
+import { dl3HexCrawlSocket, registerWithSocketReady } from "../../socket.js";
 import { hexTokenTypes } from "../moveCosts.js";
 
 export const farSight = {
@@ -23,45 +23,45 @@ export const farSight = {
   aidSkills: [],
   skills: [
     {
-      skill: "arcane",
-      display: "Arcane Divination Spell",
+      skill: "arcane-1",
+      display: "1st Level Arcane Divination Spell",
       rankRequirement: 1, // Spell level requirement
       maxUses: 0, // Default value; will be overridden by getSelectionData
-      DC: "N/A",
+      dc: "N/A",
     },
     {
-      skill: "arcane",
+      skill: "arcane-2",
       display: "Arcane Divination Spell",
       rankRequirement: 2, // Spell level requirement
       maxUses: 0, // Default value; will be overridden by getSelectionData
-      DC: "N/A",
+      dc: "N/A",
     },
     {
-      skill: "divine",
+      skill: "divine-1",
       display: "Divine Divination Spell",
       rankRequirement: 1, // Spell level requirement
       maxUses: 0, // Default value; will be overridden by getSelectionData
-      DC: "N/A",
+      dc: "N/A",
     },
     {
-      skill: "divine",
+      skill: "divine-2",
       display: "Divine Divination Spell",
       rankRequirement: 2, // Spell level requirement
       maxUses: 0, // Default value; will be overridden by getSelectionData
-      DC: "N/A",
+      dc: "N/A",
     },
   ],
   getGmData: (context) => ({}),
   getEnrichedData: ({ assignedActor, activity }) => {
     // For spell-based skills (divine/arcane), override maxUses with the sum of available uses.
     const updatedSkills = activity.skills.map((skill) => {
-      if (skill.skill === "arcane" || skill.skill === "divine") {
-        const newMaxUses = skill.rankRequirement === 1
-          ? calculateSpellMaxUses(assignedActor, skill.skill, skill.rankRequirement, true)
-          : calculateSpellMaxUses(assignedActor, skill.skill, skill.rankRequirement, true);
+      if (skill.skill.startsWith("arcane") || skill.skill.startsWith("divine")) {
+        const magicType = skill.skill.split("-")[0]; // "arcane" or "divine"
+        const newMaxUses = calculateSpellMaxUses(assignedActor, magicType, skill.rankRequirement, true);
 
         return {
           ...skill,
+          skill: `${skill.skill}`,
           maxUses: newMaxUses,
         };
       }
@@ -69,14 +69,13 @@ export const farSight = {
       return { ...skill };
     }).filter(s => 
       s.maxUses > 0
-      // Shouldn't need this as all skills are spells
-      //|| (s.skill !== "arcane" && s.skill !== "divine") 
     );
     return updatedSkills
       ? { skills: updatedSkills }
       : {};
   },
-  onUserPerform: async ({ app, skill, }) => {
+  lockAfterPerform: true,
+  onUserPerform: async ({ app, skill }) => {
     const recordNextClick = new Promise(resolve => {
       const handleClick = csDebounce((event) => {
         // Record the click's coordinates
@@ -106,7 +105,7 @@ export const farSight = {
 
     const snappedLocation = snapToAlternatingHexGrid(mouseLocation.x, mouseLocation.y);
 
-    const tokenDropResult = await dl3HexCrawlSocket.executeAsGM(dropFarSightTokenActionName, snappedLocation);
+    const tokenDropResult = await dl3HexCrawlSocket.executeAsGM(dropFarSightTokenActionName, snappedLocation, skill);
     if (!tokenDropResult.wasSuccess) {
       await app.maximize();
       app.setPosition({ width, height, top, left });
@@ -128,10 +127,16 @@ export const farSight = {
     app.setPosition({ width, height, top, left });
     return {};
   },
+  isNoCheck: true,
+  resolveBonuses: async ({ baseBonus, actionData }) => Promise.resolve([{
+    ...baseBonus,
+    wasApplied: true,
+    value: `FarSight was performed by ${actionData.performer} at Level ${actionData.skillDetails.rankRequirement}.`,
+  }]),
 }
 
 const dropFarSightTokenActionName = "dropFarSightToken";
-const dropFarSightToken = async (snappedLocation) => {
+const dropFarSightToken = async (snappedLocation, skill) => {
   const actor = game.actors.find(actor => actor.flags.hexCrawl?.actorType === hexTokenTypes.farSight);
 
   if (!actor) {
@@ -180,9 +185,7 @@ const dropFarSightToken = async (snappedLocation) => {
   };
 }
 
-export const farSightSocketConfig = socket => {
-  socket.register(
-    dropFarSightTokenActionName,
-    dropFarSightToken,
-  );
-};
+registerWithSocketReady(
+  dropFarSightTokenActionName,
+  dropFarSightToken,
+);

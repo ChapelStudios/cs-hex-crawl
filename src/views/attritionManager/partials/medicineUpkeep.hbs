@@ -1,0 +1,7 @@
+<section class="medicine-upkeep">
+  <h3>Medicine Upkeep</h3>
+  <p>Medicine Available: {{provisions.medicine}}</p>
+  <label for="medicine-consumed">Medicine Consumed:</label>
+  <input id="medicine-consumed" type="number" value="0" readonly />
+  <button class="consume-medicine"{{#unless showMedicine}} disabled{{/unless}}>Consume Medicine</button>
+</section>

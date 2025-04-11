@@ -1,3 +1,7 @@
+import { defaultFactions, getNewAttitude } from "../../factions/factionInfo.js";
+import { getFactionRepById } from "../../factions/factions.js";
+import { extraButtonTypes } from "../enumsObjects.js";
+import { bonusTypes } from "./checkOnFaction.js";
 import { factionCode } from "./common/factions.js";
 
 export const influenceAFaction = {
@@ -21,7 +25,7 @@ export const influenceAFaction = {
       dc: 10
     },
     {
-      skill: "int",
+      skill: "intimidate",
       display: "Intimidate",
       dc: 10
     },
@@ -44,14 +48,30 @@ export const influenceAFaction = {
       skill: "lis",
       display: "Listen",
       dc: 15
-    }
+    },
+    {
+      skill: "kno",
+      dc: 10
+    },
   ],
   skills: [
     {
       skill: "dip",
       display: "Diplomacy",
-      rankRequirement: 5,
-      DC: "*", // DC has stages based on the result
+      rankRequirement: 1,
+      dc: "*", // DC has stages based on the result
+    },
+    {
+      skill: "intimidate",
+      display: "Intimidate",
+      rankRequirement: 1,
+      dc: "*", // DC has stages based on the result
+    },
+    {
+      skill: "blf",
+      display: "Bluff",
+      rankRequirement: 1,
+      dc: "*", // DC has stages based on the result
     },
   ],
   getGmData: (context) => ({}),
@@ -61,4 +81,79 @@ export const influenceAFaction = {
   onUserPerform: factionCode.onUserPerform(),
   onUserUnselect: factionCode.onUserUnselect(),
   getCheckmarkData: factionCode.getCheckmarkData(),
+  resolveBonuses: async ({ checkResult, actionData, bonuses, scene, baseBonus }) => {
+    const intimidates = actionData.aids.filter(a => a.skill === "intimidate")
+      .map(ia => ({
+        ...baseBonus,
+        type: bonusTypes.intimidationTactic,
+        value: ia.checkResult.total,
+      }));
+
+    const factionId = actionData.category;
+    const faction = defaultFactions.find(f => f.id === factionId);
+    const welfareBonus = bonuses.filter(b => 
+      b.type === bonusTypes.factionLeaderBonus
+      && b.category === factionId
+      && !b.wasApplied
+    ).reduce((total, bonus) => {
+      bonus.wasApplied = true;
+      return total + (bonus.value ?? 0)
+    }, 0);
+
+    checkResult += welfareBonus;
+    const startingAttitude = getFactionRepById(scene, factionId);
+    const {
+      newReputation: changedAttitude,
+      shift,
+    } = getNewAttitude(startingAttitude, checkResult, faction.maxRep);
+    // await updateFactionRep(scene, factionId, changedAttitude);
+    const resultString = startingAttitude === changedAttitude
+      ? `${faction.name}'s Leader's attitude towards the Heroes of Pax Tharkas has not shifted from ${startingAttitude}.`
+      : `${faction.name}'s Leader's attitude towards the Heroes of Pax Tharkas has shifted from ${startingAttitude} to ${changedAttitude}`;
+    
+
+
+    return Promise.resolve([
+      ...intimidates,
+      {
+        ...baseBonus,
+        type: bonusTypes.factionReputationAdjust,
+        value: 50 * shift,
+      },
+      {
+        ...baseBonus,
+        type: bonusTypes.message,
+        value: resultString,
+        category: factionId,
+        wasApplied: true,
+      },
+      {
+        ...baseBonus,
+        type: bonusTypes.factionWasContacted,
+        value: true,
+      }
+    ]);
+  },
+  extraButtons: [
+    {
+      id: "violentInteraction",
+      type: extraButtonTypes.checkBox,
+      label: "Got Violent?",
+      action: (event, { baseBonus, bonuses }) => {
+        const newValue = event.target.checked;
+        const existingBonus = bonuses.find(b => b.type === bonusTypes.violentInteraction);
+        if (existingBonus) {
+          existingBonus.value = newValue;
+          return [];
+        }
+        else {
+          return [{
+            ...baseBonus,
+            type: bonusTypes.violentInteraction,
+            value: newValue,
+          }];
+        }
+      }
+    }
+  ]
 }

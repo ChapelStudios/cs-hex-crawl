@@ -1,0 +1,8 @@
+<section class="health-management">
+  <h3>Health Management</h3>
+  <p>Total Infirm: {{populationTotals.infirm}}</p>
+  <button class="perform-healing"{{#if healingMessage}} disabled{{/if}}>Check for Recovery</button>
+  {{#if healingMessage}}
+    <p class="healing-message">{{healingMessage}}</p>
+  {{/if}}
+</section>

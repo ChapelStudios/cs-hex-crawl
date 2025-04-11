@@ -1,5 +1,6 @@
 import { defaultForageEvent, nullEvent, nullTileId } from "../constants/events/constants.js";
 import { updateTile } from "../helpers/update.js";
+import { registerWithSocketReady } from "../socket.js";
 
 const defaultTile = Object.freeze({
   events: {
@@ -101,13 +102,11 @@ export const setKnownTileByLocationId = async (locationId, tileId) => await canv
   [`flags.hexCrawl.knownTileLocations.${locationId}`]: tileId,
 });
 
-export const tilesSocketConfig = (socket) => {
-  socket.register(
-    getTileByLocationActionName,
-    getTileByLocation,
-  );
-  socket.register(
-    updateForageDataActionName,
-    updateForageData,
-  );
-};
+registerWithSocketReady(
+  getTileByLocationActionName,
+  getTileByLocation,
+);
+registerWithSocketReady(
+  updateForageDataActionName,
+  updateForageData,
+);

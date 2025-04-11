@@ -10,8 +10,10 @@ import { loadStylesheet } from "../../helpers/display.js";
 import { generateSkillChoices } from "../../helpers/entityTools.js";
 import { getProvisions } from "../../repos/provisions.js";
 import { campActionsData, getActivityById } from "../../constants/campActions/index.js";
+import { createGmActionVms, loadGmActionList } from "../common/gmActionsList/gmActionsList.js";
 
 const localPath = file => `${moduleCodePath}views/campActions/${file}`;
+await loadGmActionList();
 
 export class CampActions extends FormApplication {
   constructor(scene, data, options) {
@@ -20,11 +22,7 @@ export class CampActions extends FormApplication {
     this.currentDay = data.currentDay;
     this.assignedActor = data.assignedActor;
     this.options.title = `Camp Actions - ${data.assignedActor.name}`;
-    this.maxHours = data.mexHours ?? 6;
-
-    //depracated, needs to come out of updateObject
-    this.completedActions = {};
-    this.aids = {};
+    this.maxHours = data.maxHours ?? 6;
     
     // Instead of keeping global state directly, encapsulate it in a dedicated manager.
     this.stateManager = new CampActionsState(scene, data.assignedActor, this.updateUI.bind(this), data.currentDay);
@@ -38,24 +36,27 @@ export class CampActions extends FormApplication {
       template: localPath("campActions.hbs"),
       title: "Camp Actions",
       resizable: true,
-      width: canvas.screenDimensions.width * (2 / 3),
-      height: "auto",
+      width: canvas.screenDimensions.width * (7 / 9),
+      height: canvas.screenDimensions.height * (5 / 7),
     });
   }
 
-  async close(options = {}) {
-    await this.stateManager.deleteUnlockedRowsForActor();
-    return super.close(options);
-  }
+  // async close(options = {}) {
+  //   await this.stateManager.deleteUnlockedRowsForActor();
+  //   return super.close(options);
+  // }
 
   getData() {
-    // Refresh global state from our state manager
     const activities = campActionsData.map(activity => this._prepareActivity(activity));
+
+    const gmActionVms = createGmActionVms(this.stateManager.getActivitiesState(), this.assignedActor.id);
+    
     return {
       activities,
       remainingHours: this.getRemainingHours(),
       checkmarkImage: artPath("checkmark.png"),
       isGM: game.user.isGM,
+      gmActionVms,
     };
   }
   
@@ -102,9 +103,33 @@ export class CampActions extends FormApplication {
     html.on("click", ".cs-dl3-activity-title, .cs-dl3-details-toggle", event => this._toggleDetails(event));
     html.on("click", ".cs-dl3-checkmark img", event => this._handleUnselectAction(event, html));
     html.on("click", ".cs-dl3-clear-button", async () => await this.stateManager.deleteUnlockedRowsForActor());
+
+    // GM Stuff
     html.on("click", ".cs-dl3-clear-global-button", async () => {
       if (!game.user.isGM) return;
       this.stateManager.resetState();
+    });
+    html.on("click", ".cs-dl3-clear-locked-button", async () => {
+      if (!game.user.isGM) return;
+      this.stateManager.deleteAllRowsForActor();
+    });
+
+    html.on("click", ".actions-header", () => {
+      const table = html.find(".actions-details");
+      table.toggleClass("hidden");
+    });
+    html.on("click", ".refresh-button", () => {
+      this.stateManager.refreshStateFromScene();
+      this.render(true);
+    });
+    html.on("click", ".gm-actions-container .remove-button", (event) => {
+      event.stopPropagation();
+      const clickedButton = $(event.currentTarget);
+  
+      const actionId = clickedButton.data("action-id");
+
+      this.stateManager.removeAction(actionId);
+      this.render(true);
     });
   }
 
@@ -114,13 +139,16 @@ export class CampActions extends FormApplication {
     }
 
     const elements = html.find(".cs-dl3-activity");
-    const remainingHours = this.maxHours - this.stateManager.getHoursForPerformer();
+    const remainingHours = this.getRemainingHours();
 
     for (let i = 0; i < elements.length; i++) {
       const element = elements.eq(i);
       const activity = this._getEnrichedActivity(campActionsData[i]);
-      const activityActions = this.stateManager.getActivityActions(activity.id);
-      const hasEnoughHoursForActivity = remainingHours - activity.timeCost >= 0;
+      const activityActions = this.stateManager.getActivityActions(activity.id)
+        .filter(a => a.count > 0);
+      const activityPerformance = activityActions.find(a => a.isAid === false) || null;
+      const timeCost = activityPerformance?.costOverride ?? activity.timeCost;
+      const hasEnoughHoursForActivity = (remainingHours - timeCost) >= 0;
       
       await UI.updateActivityUI(
         element,
@@ -147,7 +175,7 @@ export class CampActions extends FormApplication {
     const clickedCheckmark = $(event.currentTarget);
 
     // Prevent changes for locked activities.
-    const isLocked = clickedCheckmark.data("locked") === "true";
+    const isLocked = clickedCheckmark.data("locked") ?? false;
     if (isLocked) {
       return;
     }
@@ -179,7 +207,12 @@ export class CampActions extends FormApplication {
     await this.stateManager.addOrUpdateActivity(
       activity.id,
       skillCode,
-      { isAid, isDecrement: true, extraData });
+      { isAid, isCountDecrement: true, extraData });
+
+
+    if (game.user.isGM) {
+      this.render(true);
+    }
   }
 
   // Event handler: Perform an action
@@ -202,6 +235,7 @@ export class CampActions extends FormApplication {
         actorName: this.assignedActor.name,
         app: this,
         skill: activity.skills.find(s => s.skill === selectedSkillCode),
+        remainingHours: this.getRemainingHours(),
       });
 
       if (extraData.isCancel) {
@@ -219,6 +253,10 @@ export class CampActions extends FormApplication {
       selectedSkillCode,
       { locked: activity.lockAfterPerform, extraData }
     );
+
+    if (game.user.isGM) {
+      this.render(true);
+    }
   }
 
   // Event handler: Aid another action
@@ -254,7 +292,12 @@ export class CampActions extends FormApplication {
     await this.stateManager.addOrUpdateActivity(
       activity.id,
       selectedSkill,
-      { isAid: true, extraData });
+      { isAid: true, extraData }
+    );
+
+    if (game.user.isGM) {
+      this.render(true);
+    }
   }
 
   // Event handler: Toggle the details view

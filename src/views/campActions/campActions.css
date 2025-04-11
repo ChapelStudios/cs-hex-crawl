@@ -29,7 +29,6 @@ form.cs-dl3-camp-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  cursor: pointer;
 }
 
 .cs-dl3-activity-title {
@@ -145,12 +144,7 @@ form.cs-dl3-camp-actions {
   width: 2em; 
   height: 2em; 
   vertical-align: middle; 
-  margin-right: 0.75em;
   cursor: pointer;
-}
-
-.cs-dl3-checkmark {
-  margin-right: 0.75em;
 }
 
 .cs-dl3-skill-select {
@@ -221,6 +215,7 @@ option:disabled {
 
 /* Container for the left side of the header (title + checkmarks) */
 .cs-dl3-header-left {
+  flex: 1;
   display: inline-flex;
   align-items: center;
   gap: 0.5em;
@@ -265,25 +260,44 @@ option:disabled {
   background-color: #b02a37;
 }
 
-.cs-dl3-checkmark.cs-dl3-disabled-checkmark {
+.cs-dl3-disabled-checkmark {
   position: relative;
   cursor: not-allowed;
+  filter: grayscale(100%) opacity(50%); /* Grey-out effect */
 }
 
-/* Disable interaction */
-/* This also disables the title and it's info leave to code block for now */
 .cs-dl3-disabled-checkmark img {
-  pointer-events: none; 
+  pointer-events: auto; /* Allow hover and interactions like title/alt */
 }
 
-.cs-dl3-disabled-checkmark::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(128, 128, 128, 0.5); /* Semi-transparent gray */
-  z-index: 1; /* Ensure it overlays the checkbox */
-  border-radius: 4px; /* Match checkbox style if rounded */
+.cs-dl3-disabled-checkmark img:hover {
+  /* Optional: Add a hover-specific visual effect if desired */
+  filter: none;
+}
+
+.cs-dl3-checkmark-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cs-dl3-checkmark {
+  display: inline-flex;
+  align-items: center;
+}
+
+.actions-header {
+  cursor: pointer;
+  background-color: #f1f1f1;
+  padding: 10px;
+  font-weight: bold;
+}
+
+.gm-actions-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+  grid-column: span 3;
 }

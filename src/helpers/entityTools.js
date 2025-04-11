@@ -1,7 +1,11 @@
+import { getSkillDisplay } from "../constants/campActions/common/helpers.js";
+import { attributeTypes } from "../constants/enumsObjects.js";
+import { registerWithSocketReady } from "../socket.js";
+
 export const getNestedProperty = (obj, path, defaultValue = undefined) =>
   path.split('.').reduce((current, key) => (current ? current[key] : defaultValue), obj);
 
-export const abilityCodes = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
+export const abilityCodes = Object.keys(attributeTypes);
 export const isAbilityCode = (code) => abilityCodes.includes(code);
 
 export const getD35eSkillName = (skillCode) => {
@@ -23,16 +27,14 @@ export const requestSkillCheck = async (actor, skillname) => {
     actor = game.actors.get(actor._id);
   }
   return disambiguatedSkillCode === false
-    ? await actor.rollAbilityTest(skillname)
+    ? (await actor.rollAbilityTest(skillname))[0]
     : await actor.rollSkill(disambiguatedSkillCode);
 };
 
-export const skillCheckSocketConfig = socket => {
-  socket.register(
-    requestSkillCheckActionName,
-    requestSkillCheck
-  );
-};
+registerWithSocketReady(
+  requestSkillCheckActionName,
+  requestSkillCheck
+);
 
 export const getActorSkillCodeData = (actor, skillCode) => {
   const disambiguatedSkillCode = disambiguateSkillCode(skillCode);
@@ -59,7 +61,7 @@ export const sortSkillOptions = (a, b) => {
 // Helper: Returns the select option for spell-based skills (e.g. "divine" or "arcane")
 // Hides the DC from the label.
 export const getSelectOptionForSpell = (actor, skillDef) => {
-  const spellType = skillDef.skill;         // "divine" or "arcane"
+  const spellType = skillDef.skill.split('-')[0];
   const spellLevel = skillDef.rankRequirement; // The required spell level
   const spellbooks = actor.system.attributes.spells.spellbooks;
   let available = false;
@@ -102,6 +104,12 @@ export const getSelectOptionForItem = (actor, skillDef) => {
   };
 };
 
+export const lookUpSkillDisplay = (skillCode, display) => {
+  const skillDisplay = getSkillDisplay(skillCode)
+    || display
+    || skillCode;
+  return skillDisplay;
+}
 
 // Helper: Returns the select option for normal perform skills.
 // Always shows the DC value (defaulting to 10 if missing) in the label.
@@ -117,9 +125,11 @@ export const getSelectOptionForPerform = (actor, skillDef) => {
     ? `(Rank: ${skillDef.rankRequirement}) `
     : '';
 
+    const skillDisplay = lookUpSkillDisplay(skillDef.skill, skillDef.display);
+
   return {
     value: skillDef.skill,
-    label: `${skillDef.display} ${rankDisplay}[DC ${normalizedDC}]`,
+    label: `${skillDisplay} ${rankDisplay}[DC ${normalizedDC}]`,
     disabled: !meetsRequirement,
     maxUses: (typeof skillDef.maxUses !== "undefined") ? skillDef.maxUses : Infinity,
   };
@@ -145,6 +155,14 @@ export const getSelectOptionForAid = (actor, skillDef) => {
     disabled: !meetsRequirement,
     maxUses: (typeof skillDef.maxUses !== "undefined") ? skillDef.maxUses : Infinity,
   };
+};
+
+export const skillTypes = {
+  perform: "perform",
+  aid: "aid",
+  divine: "divine",
+  arcane: "arcane",
+  itemName: "itemName",
 };
 
 // Main exported function that dispatches to the appropriate helper.
@@ -182,20 +200,20 @@ export const getSelectOptionForAid = (actor, skillDef) => {
  *   • label: a string to display,
  *   • disabled: a boolean indicating if the option should be disabled.
  */
-export const getSelectOptionFromSkill = (actor, skillDef, type = "perform") => {
-  if (skillDef.skill === "divine" || skillDef.skill === "arcane") {
+export const getSelectOptionFromSkill = (actor, skillDef, type = skillTypes.perform) => {
+  if (skillDef.skill.startsWith(skillTypes.divine) || skillDef.skill.startsWith(skillTypes.arcane)) {
     return getSelectOptionForSpell(actor, skillDef);
   }
 
-  if (skillDef.skill === "itemName") {
+  if (skillDef.skill.startsWith(skillTypes.itemName)) {
     return getSelectOptionForItem(actor, skillDef);
   }
 
-  if (type === "perform") {
+  if (type === skillTypes.perform) {
     return getSelectOptionForPerform(actor, skillDef);
   }
 
-  if (type === "aid") {
+  if (type === skillTypes.aid) {
     return getSelectOptionForAid(actor, skillDef);
   }
 

@@ -2,7 +2,6 @@ import { localeInfoLookup, localeTypes } from "../constants/moveCosts.js";
 import { distanceBetweenPoints, snapMovementTo1 } from "../helpers/math.js";
 import { updateToken } from "../helpers/update.js";
 import { dl3HexCrawlSocket } from "../socket.js";
-import { renderHexDetailInfo } from "../views/hexInfo/HexInfo.js";
 import { discoverTileActionName } from "./events.js";
 import { adjustGameClock, getGameClock } from "./gameClock.js";
 import { getTileByLocationActionName, getTileLocale, isHexCrawlTile } from "./tiles.js";
@@ -17,6 +16,10 @@ export const setTokenMoves = async (token, moveCount) => await updateToken(token
 });
 
 export const adjustCurrentMoves = async (token, adjustment, shouldAdvanceTime = true) => {
+  if (adjustment === 0) {
+    return;
+  }
+  
   const currentMoves = getTokenMoves(token);
   const remainingMoves = currentMoves + adjustment;
   if (remainingMoves < 0) {
@@ -72,7 +75,7 @@ export const onTokenMove = async (scene, token, updates, options, userId) => {
     // when we await this, the update will process and we need to manually perform any updates after this
     const postMoveTile = await dl3HexCrawlSocket.executeAsGM(getTileByLocationActionName, scene, snappedPosition);
     if (!isHexCrawlTile(postMoveTile)) {
-      return;
+      return null;
     }
 
     // If the token moves more than one hex, snap to one hex distance
@@ -80,7 +83,7 @@ export const onTokenMove = async (scene, token, updates, options, userId) => {
       // Allow the GM to move the token around without effecting game play
       // ToDo: allow the gm to move 1 as well and instead ask gm if tile should be discovered.
       if (movementDistance > (gridSize * 2) && game.user.isGM) {
-        return;
+        return null;
       }
       updates.x = snappedPosition.x;
       updates.y = snappedPosition.y;
@@ -88,11 +91,6 @@ export const onTokenMove = async (scene, token, updates, options, userId) => {
 
     // handle move cost
     // ToDo: when using the road bonus you should actually pay this:
-    // ((premoveTile.cost + postMoveTile.cost) / 2) - premoveTile.cost
-    // ToDo: extract this so it can also be used in the mouseover Preview Tool (HexBasicInfo)
-    // const hasRoadBonus = doesTokenHaveRoadBonus(token);
-    // const isNewTileRoad = doesTileGiveRoadBonus(postMoveTile);
-    // const normalCost = getMoveCostFromLocale(getTileLocale(postMoveTile));
     const { cost, newRoadBonus } = getMoveCost(postMoveTile, token);
     const remainingMoves = getTokenMoves(token) - cost;
 
@@ -105,7 +103,7 @@ export const onTokenMove = async (scene, token, updates, options, userId) => {
       if (!game.user.isGM) {
         await updateToken(token, updates);
       }
-      return; // Prevent further updates
+      return null; // Prevent further updates
     }
     
     updates['flags.hexCrawl.currentMoveCount'] = remainingMoves;
@@ -118,10 +116,9 @@ export const onTokenMove = async (scene, token, updates, options, userId) => {
     // discover tile discoverTileActionName
     await dl3HexCrawlSocket.executeAsGM(discoverTileActionName, scene, postMoveTile, token);
 
-    // display hex actions info app
-    await renderHexDetailInfo(postMoveTile, token);
-
     await updateToken(token, updates);
+
+    return postMoveTile;
   }
 };
 

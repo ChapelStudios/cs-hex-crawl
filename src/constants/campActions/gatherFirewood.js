@@ -1,3 +1,4 @@
+import { bonusTypes } from "./checkOnFaction.js";
 import { factionCode, mapCategoryToFaction } from "./common/factions.js";
 
 const cookOption = {
@@ -5,10 +6,10 @@ const cookOption = {
   name: "Cook Fires",
 };
 
-const mapCategoryToFactionOrCooking = (factionId) => {
-  return factionId === cookOption.id
+const mapCategoryToFactionOrCooking = (category) => {
+  return category === cookOption.id
     ? cookOption
-    : mapCategoryToFaction(factionId);
+    : mapCategoryToFaction(category);
 };
 
 export const gatherFirewood = {
@@ -48,4 +49,31 @@ export const gatherFirewood = {
   onUserPerform: factionCode.onUserPerform(mapCategoryToFactionOrCooking, [cookOption]),
   onUserUnselect: factionCode.onUserUnselect(mapCategoryToFactionOrCooking),
   getCheckmarkData: factionCode.getCheckmarkData(),
+  resolveBonuses: async ({ checkResult, actionData, baseBonus }) => {
+    if (checkResult < actionData.skillDetails.dc) {
+      return Promise.resolve([{
+        ...baseBonus,
+        value: `${actionData.skillDetails.display} check of ${checkResult} failed to beat the DC of ${actionData.skillDetails.dc}`,
+        wasApplied: true,
+      }]);
+    }
+
+    const result = actionData.category === cookOption.id
+      ? [{
+        ...baseBonus,
+        type: bonusTypes.cookingBonus,
+        value: 5,
+      }]
+      : [{
+        ...baseBonus,
+        type: bonusTypes.factionReputationAdjust,
+        value: 10,
+      }, {
+        ...baseBonus,
+        type: bonusTypes.factionWasContacted,
+        value: true,
+      }];
+
+    return Promise.resolve(result);
+  },
 };
